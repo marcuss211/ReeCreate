@@ -1,22 +1,41 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Instagram Reels Tracking & Control Panel API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User management
+  - name: instagram-accounts
+    description: Instagram account management
+  - name: daily-reports
+    description: Daily reels report management
+  - name: report-items
+    description: Report items (reels links)
+  - name: wallet-addresses
+    description: USDT TRC20 wallet address management
+  - name: delay-flags
+    description: Delay and bulk entry monitoring
+  - name: audit-logs
+    description: Audit log management
+  - name: dashboard
+    description: Dashboard summary data
+  - name: export
+    description: Export functionality
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +43,630 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # USERS
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin only)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}/reset-password:
+    post:
+      operationId: resetUserPassword
+      tags: [users]
+      summary: Reset user password (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordBody"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # INSTAGRAM ACCOUNTS
+  /instagram-accounts:
+    get:
+      operationId: listInstagramAccounts
+      tags: [instagram-accounts]
+      summary: List Instagram accounts
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of Instagram accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstagramAccount"
+    post:
+      operationId: createInstagramAccount
+      tags: [instagram-accounts]
+      summary: Create Instagram account (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInstagramAccountBody"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstagramAccount"
+
+  /instagram-accounts/{id}:
+    get:
+      operationId: getInstagramAccount
+      tags: [instagram-accounts]
+      summary: Get Instagram account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Instagram account detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstagramAccount"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateInstagramAccount
+      tags: [instagram-accounts]
+      summary: Update Instagram account (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInstagramAccountBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstagramAccount"
+
+  # DAILY REPORTS
+  /daily-reports:
+    get:
+      operationId: listDailyReports
+      tags: [daily-reports]
+      summary: List daily reports
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of daily reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyReport"
+    post:
+      operationId: createDailyReport
+      tags: [daily-reports]
+      summary: Create or get daily report for a date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDailyReportBody"
+      responses:
+        "200":
+          description: Report created or fetched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReport"
+
+  /daily-reports/{id}:
+    get:
+      operationId: getDailyReport
+      tags: [daily-reports]
+      summary: Get daily report detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Daily report detail with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReportDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateDailyReport
+      tags: [daily-reports]
+      summary: Update daily report (submit, admin review)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDailyReportBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReport"
+
+  # REPORT ITEMS
+  /report-items:
+    post:
+      operationId: createReportItem
+      tags: [report-items]
+      summary: Add a reels link to a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportItemBody"
+      responses:
+        "201":
+          description: Item added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportItem"
+        "400":
+          description: Invalid URL or duplicate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /report-items/{id}:
+    delete:
+      operationId: deleteReportItem
+      tags: [report-items]
+      summary: Delete a report item (before submission)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # WALLET ADDRESSES
+  /wallet-addresses:
+    get:
+      operationId: listWalletAddresses
+      tags: [wallet-addresses]
+      summary: List wallet addresses (admin sees all, user sees own)
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of wallet addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WalletAddress"
+    post:
+      operationId: setWalletAddress
+      tags: [wallet-addresses]
+      summary: Set or update wallet address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetWalletAddressBody"
+      responses:
+        "200":
+          description: Wallet address set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletAddress"
+        "400":
+          description: Invalid TRC20 address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallet-addresses/logs:
+    get:
+      operationId: listWalletLogs
+      tags: [wallet-addresses]
+      summary: List wallet address change logs
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: since
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Wallet logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WalletAddressLog"
+
+  # DELAY FLAGS
+  /delay-flags:
+    get:
+      operationId: listDelayFlags
+      tags: [delay-flags]
+      summary: List delay flags (admin)
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: isBulkEntryFlag
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delay flags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DelayFlag"
+
+  /delay-flags/behavior-summary:
+    get:
+      operationId: getUserBehaviorSummary
+      tags: [delay-flags]
+      summary: Get behavior summary per user (admin)
+      responses:
+        "200":
+          description: User behavior summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserBehaviorSummary"
+
+  # AUDIT LOGS
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [audit-logs]
+      summary: List audit logs (admin)
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: actionType
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLog"
+
+  # DASHBOARD
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get admin dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/user-summary:
+    get:
+      operationId: getUserDashboardSummary
+      tags: [dashboard]
+      summary: Get current user's dashboard summary
+      responses:
+        "200":
+          description: User dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDashboardSummary"
+
+  /dashboard/daily-activity:
+    get:
+      operationId: getDailyActivity
+      tags: [dashboard]
+      summary: Get daily reels submission activity (chart data)
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Daily activity data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyActivityPoint"
+
+  # EXPORT
+  /export/daily-report:
+    get:
+      operationId: exportDailyReport
+      tags: [export]
+      summary: Export daily report as CSV
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, xlsx]
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +677,610 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        personnelNo:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - username
+        - role
+        - status
+        - createdAt
+        - updatedAt
+
+    UserDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        personnelNo:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        instagramAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstagramAccount"
+        behaviorSummary:
+          type: string
+        walletAddress:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - username
+        - role
+        - status
+        - createdAt
+        - updatedAt
+        - instagramAccounts
+        - behaviorSummary
+
+    CreateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+        personnelNo:
+          type: ["integer", "null"]
+      required:
+        - name
+        - username
+        - password
+        - role
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        personnelNo:
+          type: ["integer", "null"]
+
+    ResetPasswordBody:
+      type: object
+      properties:
+        newPassword:
+          type: string
+      required:
+        - newPassword
+
+    InstagramAccount:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        instagramUsername:
+          type: string
+        profileUrl:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        userName:
+          type: ["string", "null"]
+        userPersonnelNo:
+          type: ["integer", "null"]
+      required:
+        - id
+        - userId
+        - instagramUsername
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateInstagramAccountBody:
+      type: object
+      properties:
+        userId:
+          type: integer
+        instagramUsername:
+          type: string
+        profileUrl:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+      required:
+        - userId
+        - instagramUsername
+
+    UpdateInstagramAccountBody:
+      type: object
+      properties:
+        instagramUsername:
+          type: string
+        profileUrl:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+        userId:
+          type: ["integer", "null"]
+
+    DailyReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        date:
+          type: string
+        status:
+          type: string
+        adminNote:
+          type: ["string", "null"]
+        submittedAt:
+          type: ["string", "null"]
+        approvedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        userName:
+          type: ["string", "null"]
+        userPersonnelNo:
+          type: ["integer", "null"]
+        itemCount:
+          type: integer
+      required:
+        - id
+        - userId
+        - date
+        - status
+        - createdAt
+        - updatedAt
+        - itemCount
+
+    DailyReportDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        date:
+          type: string
+        status:
+          type: string
+        adminNote:
+          type: ["string", "null"]
+        submittedAt:
+          type: ["string", "null"]
+        approvedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        userName:
+          type: ["string", "null"]
+        userPersonnelNo:
+          type: ["integer", "null"]
+        itemCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportItemWithAccount"
+      required:
+        - id
+        - userId
+        - date
+        - status
+        - createdAt
+        - updatedAt
+        - itemCount
+        - items
+
+    CreateDailyReportBody:
+      type: object
+      properties:
+        date:
+          type: string
+        userId:
+          type: ["integer", "null"]
+      required:
+        - date
+
+    UpdateDailyReportBody:
+      type: object
+      properties:
+        status:
+          type: string
+        adminNote:
+          type: ["string", "null"]
+
+    ReportItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        reportId:
+          type: integer
+        instagramAccountId:
+          type: integer
+        reelsUrl:
+          type: string
+        contentDate:
+          type: string
+        enteredAt:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - reportId
+        - instagramAccountId
+        - reelsUrl
+        - contentDate
+        - enteredAt
+        - createdAt
+
+    ReportItemWithAccount:
+      type: object
+      properties:
+        id:
+          type: integer
+        reportId:
+          type: integer
+        instagramAccountId:
+          type: integer
+        reelsUrl:
+          type: string
+        contentDate:
+          type: string
+        enteredAt:
+          type: string
+        createdAt:
+          type: string
+        instagramUsername:
+          type: ["string", "null"]
+      required:
+        - id
+        - reportId
+        - instagramAccountId
+        - reelsUrl
+        - contentDate
+        - enteredAt
+        - createdAt
+
+    CreateReportItemBody:
+      type: object
+      properties:
+        reportId:
+          type: integer
+        instagramAccountId:
+          type: integer
+        reelsUrl:
+          type: string
+        contentDate:
+          type: string
+      required:
+        - reportId
+        - instagramAccountId
+        - reelsUrl
+        - contentDate
+
+    WalletAddress:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        network:
+          type: string
+        walletAddress:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        userName:
+          type: ["string", "null"]
+        userPersonnelNo:
+          type: ["integer", "null"]
+      required:
+        - id
+        - userId
+        - network
+        - walletAddress
+        - status
+        - createdAt
+        - updatedAt
+
+    SetWalletAddressBody:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+        note:
+          type: ["string", "null"]
+      required:
+        - walletAddress
+
+    WalletAddressLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        oldWalletAddress:
+          type: ["string", "null"]
+        newWalletAddress:
+          type: string
+        changedAt:
+          type: string
+        changedBy:
+          type: ["integer", "null"]
+        note:
+          type: ["string", "null"]
+        userName:
+          type: ["string", "null"]
+        userPersonnelNo:
+          type: ["integer", "null"]
+        changedByName:
+          type: ["string", "null"]
+      required:
+        - id
+        - userId
+        - newWalletAddress
+        - changedAt
+
+    DelayFlag:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        reportId:
+          type: ["integer", "null"]
+        delayDayCount:
+          type: integer
+        isRepeatIssue:
+          type: integer
+        isBulkEntryFlag:
+          type: integer
+        createdAt:
+          type: string
+        userName:
+          type: ["string", "null"]
+        userPersonnelNo:
+          type: ["integer", "null"]
+      required:
+        - id
+        - userId
+        - delayDayCount
+        - isRepeatIssue
+        - isBulkEntryFlag
+        - createdAt
+
+    UserBehaviorSummary:
+      type: object
+      properties:
+        userId:
+          type: integer
+        userName:
+          type: string
+        userPersonnelNo:
+          type: ["integer", "null"]
+        behavior:
+          type: string
+        totalDelayFlags:
+          type: integer
+        maxDelayDays:
+          type: integer
+        bulkEntryFlags:
+          type: integer
+        repeatIssues:
+          type: integer
+      required:
+        - userId
+        - userName
+        - behavior
+        - totalDelayFlags
+        - maxDelayDays
+        - bulkEntryFlags
+        - repeatIssues
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: ["integer", "null"]
+        actionType:
+          type: string
+        targetType:
+          type: ["string", "null"]
+        targetId:
+          type: ["integer", "null"]
+        oldValue:
+          type: ["string", "null"]
+        newValue:
+          type: ["string", "null"]
+        ipAddress:
+          type: ["string", "null"]
+        userAgent:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        userName:
+          type: ["string", "null"]
+      required:
+        - id
+        - actionType
+        - createdAt
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        todaySubmittedCount:
+          type: integer
+        todayMissingCount:
+          type: integer
+        totalReelsTodayCount:
+          type: integer
+        pendingApprovals:
+          type: integer
+        rejectedItems:
+          type: integer
+        delayedUsers:
+          type: integer
+        bulkFlaggedUsers:
+          type: integer
+        walletChanges24h:
+          type: integer
+      required:
+        - totalUsers
+        - activeUsers
+        - todaySubmittedCount
+        - todayMissingCount
+        - totalReelsTodayCount
+        - pendingApprovals
+        - rejectedItems
+        - delayedUsers
+        - bulkFlaggedUsers
+        - walletChanges24h
+
+    UserDashboardSummary:
+      type: object
+      properties:
+        name:
+          type: string
+        personnelNo:
+          type: ["integer", "null"]
+        instagramAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstagramAccount"
+        todayStatus:
+          type: ["string", "null"]
+        missingDaysCount:
+          type: integer
+        adminNotes:
+          type: array
+          items:
+            type: string
+        walletAddress:
+          type: ["string", "null"]
+        walletStatus:
+          type: ["string", "null"]
+      required:
+        - name
+        - instagramAccounts
+        - missingDaysCount
+        - adminNotes
+
+    DailyActivityPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        submitted:
+          type: integer
+        missing:
+          type: integer
+        reelsCount:
+          type: integer
+      required:
+        - date
+        - submitted
+        - missing
+        - reelsCount

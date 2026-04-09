@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Instagram Reels Control Panel"
+version = "1.0.0"
+id = "artifacts/reels-panel"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20876
+
+[services.development]
+run = "pnpm --filter @workspace/reels-panel run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/reels-panel", "run", "build" ]
+publicDir = "artifacts/reels-panel/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20876"
+BASE_PATH = "/"

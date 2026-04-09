@@ -1,0 +1,684 @@
+Build a production-ready, visually polished full-stack web app for internal operations called:
+
+Instagram Reels Tracking & Control Panel
+
+IMPORTANT:
+This is an INTERNAL operational system.
+It is NOT a social platform.
+It does NOT host videos.
+It does NOT process payments.
+It is only used for:
+- daily Instagram Reels tracking
+- admin review/control
+- audit logging
+- delayed/bulk submission detection
+- USDT TRC20 wallet address management
+
+The app must feel modern, premium, fast, and easy to operate.
+Do not build a generic ugly CRUD panel.
+Design it as a clean internal dashboard product.
+
+==================================================
+1. TECH STACK
+==================================================
+
+Use:
+- Frontend: React + TypeScript + Vite
+- Backend: Node.js + Express + TypeScript
+- Database: PostgreSQL
+- ORM: Prisma or Drizzle ORM
+- Styling: Tailwind CSS
+- UI Components: shadcn/ui style component system or equivalent modern reusable UI kit
+- Tables: modern data table with sorting/filtering/search
+- Forms: React Hook Form + Zod
+- Authentication: secure session-based auth or JWT
+- Password hashing: bcrypt
+- Export: CSV and XLSX
+- Charts: lightweight admin dashboard charts if useful
+- Deployment-ready for Replit
+
+Project structure must be clean and scalable:
+- client
+- server
+- db
+- shared
+
+==================================================
+2. PRODUCT / UX EXPECTATION
+==================================================
+
+This should feel like a real admin tool, not a school project.
+
+UI must be:
+- clean
+- modern
+- premium
+- simple
+- responsive
+- fast to use
+- low-click workflow
+- dashboard-oriented
+
+Use:
+- sidebar navigation
+- top summary cards
+- filters
+- search
+- status badges
+- modals/drawers for edit forms where useful
+- tables for operational control
+- clear empty/loading/error states
+- toast notifications
+
+Visual style:
+- white or dark-neutral modern dashboard theme
+- soft cards
+- clean spacing
+- rounded corners
+- good typography hierarchy
+- badges for statuses
+- do not overuse colors
+- important actions should stand out clearly
+
+==================================================
+3. USER ROLES
+==================================================
+
+There are only 2 roles:
+
+1) admin
+2) user
+
+Admin permissions:
+- create users
+- edit users
+- activate/deactivate users
+- reset passwords
+- assign unique personnel numbers
+- create and assign Instagram accounts to users
+- view all users and all records
+- review daily submissions
+- mark records as approved / missing / rejected
+- add admin notes
+- monitor delayed submissions
+- monitor bulk/backfilled submissions
+- monitor TRC20 wallet address changes
+- export reports
+
+User permissions:
+- login
+- view only their own data
+- view assigned Instagram accounts
+- submit daily reels links under assigned accounts
+- view own history
+- view admin notes
+- add/update own USDT TRC20 address
+- view own wallet address history
+
+Users cannot:
+- create their own Instagram accounts
+- view other users
+- access admin pages
+
+==================================================
+4. USER NUMBERING SYSTEM
+==================================================
+
+Each user must have a unique personnel number.
+
+Rules:
+- integer only
+- range: 300 to 2000
+- unique
+- shown in admin panel and user profile/dashboard
+
+Purpose:
+- internal anonymous identification
+- payment-day group notifications like:
+  "Payment completed for user #347"
+
+==================================================
+5. MAIN DATA MODELS
+==================================================
+
+Create proper database schema and relations for:
+
+users
+- id
+- name
+- username
+- password_hash
+- role
+- status
+- personnel_no
+- created_at
+- updated_at
+
+instagram_accounts
+- id
+- user_id
+- instagram_username
+- profile_url
+- description
+- status
+- created_at
+- updated_at
+
+daily_reports
+- id
+- user_id
+- date
+- status
+- admin_note
+- submitted_at
+- approved_at
+- created_at
+- updated_at
+
+report_items
+- id
+- report_id
+- instagram_account_id
+- reels_url
+- content_date
+- entered_at
+- created_at
+
+wallet_addresses
+- id
+- user_id
+- network
+- wallet_address
+- status
+- created_at
+- updated_at
+
+wallet_address_logs
+- id
+- user_id
+- old_wallet_address
+- new_wallet_address
+- changed_at
+- changed_by
+- note
+
+audit_logs
+- id
+- user_id
+- action_type
+- target_type
+- target_id
+- old_value
+- new_value
+- ip_address
+- user_agent
+- created_at
+
+delay_flags
+- id
+- user_id
+- report_id
+- delay_day_count
+- is_repeat_issue
+- is_bulk_entry_flag
+- created_at
+
+==================================================
+6. STATUS SYSTEM
+==================================================
+
+Daily report statuses:
+- draft
+- submitted
+- approved
+- missing
+- rejected
+- late
+- bulk_flagged
+
+Wallet statuses:
+- active
+- replaced
+- flagged
+
+User statuses:
+- active
+- passive
+
+==================================================
+7. CORE BUSINESS LOGIC
+==================================================
+
+A) INSTAGRAM ACCOUNT ASSIGNMENT
+- Only admin can create Instagram accounts
+- Each Instagram account belongs to exactly one user
+- User can only see accounts assigned to them
+
+B) DAILY ENTRY FLOW
+- User logs in
+- User sees assigned Instagram accounts
+- For each assigned account, user can add one or more reels links for a selected day
+- User can save as draft or submit the day as completed
+
+C) DAILY ENTRY RULES
+- Entries are expected daily
+- 1-2 days delay can happen sometimes and is acceptable
+- More than 2 days delay must be clearly flagged for admin visibility
+- End-of-month bulk backfilling is NOT acceptable
+- If someone leaves many days empty and later adds many links at once, admin must detect it easily
+
+D) DUPLICATE RULE
+- Same reels URL cannot be inserted twice
+
+E) HISTORY RULE
+- No hard deletion of historical records
+- Keep logs and timestamps for everything important
+
+==================================================
+8. REELS URL VALIDATION
+==================================================
+
+Validate reels URLs strictly.
+
+Accept only URLs containing:
+- instagram.com/reel/
+or
+- instagram.com/reels/
+
+Reject invalid formats.
+
+Normalize URLs before saving if reasonable.
+
+==================================================
+9. DELAY & BULK ENTRY DETECTION
+==================================================
+
+Implement automatic detection logic.
+
+DELAY DETECTION:
+- If content_date is 1 day behind -> note as 1-day delay
+- If 2 days behind -> note as 2-day delay
+- If more than 2 days behind -> clear flag
+
+BULK ENTRY DETECTION:
+Flag suspicious behavior such as:
+- many past-date entries created in one session
+- too many backfilled items within a short time
+- obvious end-of-month mass entry behavior
+
+Store results in delay_flags table.
+
+In admin UI, show a behavior summary for each user such as:
+- normal
+- often delayed
+- 2+ days delayed
+- bulk entry suspected
+- needs attention
+
+This is important because the system may be used with 100+ users.
+
+==================================================
+10. WALLET / TRC20 PAGE
+==================================================
+
+Create a dedicated user page called:
+Cekim
+
+Purpose:
+- user adds or updates their own USDT TRC20 wallet address
+- user sees current wallet address
+- user sees wallet history
+
+IMPORTANT:
+This app does NOT send crypto and does NOT perform withdrawals.
+It only stores and tracks wallet addresses safely.
+
+TRC20 VALIDATION:
+Use strict validation:
+- must start with T
+- must be 34 characters
+- must match regex:
+
+^T[1-9A-HJ-NP-Za-km-z]{33}$
+
+If invalid, reject input with a clear error message.
+
+Every wallet change must:
+- create a wallet history log
+- update wallet status
+- create an audit log
+
+==================================================
+11. ADMIN SECURITY VIEW FOR WALLET CHANGES
+==================================================
+
+Create an admin section showing:
+- who changed wallet today
+- user name
+- personnel number
+- old address
+- new address
+- change time
+- number of changes
+- optional notes
+
+This is for security visibility in case of suspicious access or panel compromise.
+
+==================================================
+12. ADMIN DASHBOARD
+==================================================
+
+Create a polished admin dashboard with summary cards, charts where useful, and operational tables.
+
+Must include:
+- total users
+- active users
+- today submitted user count
+- today missing user count
+- total reels entered today
+- pending approvals
+- rejected items
+- delayed users
+- bulk flagged users
+- wallet changes in last 24h
+
+Dashboard UX should feel strong and executive-friendly.
+Use compact visual summaries and actionable widgets.
+
+==================================================
+13. ADMIN PAGES
+==================================================
+
+Create these admin pages:
+
+1) Dashboard
+
+2) User Management
+- create user
+- edit user
+- activate/passive
+- reset password
+- assign personnel number
+- user detail view
+- search and filters
+
+3) Instagram Account Management
+- create account
+- assign to user
+- edit account
+- passive account
+- list by user
+- filters and search
+
+4) Daily Review Page
+- filter by date
+- show all users for selected date
+- show assigned accounts and reels counts
+- open details
+- approve / missing / reject
+- add note
+
+Example view:
+User Ahmet / #347
+@test_123 -> 3 reels
+@test_222 -> 0 reels
+
+5) Delay / Bulk Monitoring Page
+- users with repeated delays
+- users with 2+ day delays
+- suspected bulk entries
+- behavior summary
+
+6) Wallet Change Monitoring Page
+- daily wallet changes
+- full wallet history by user
+
+7) Reports / Export Page
+
+Use strong admin UX:
+- sticky filters where useful
+- searchable tables
+- row actions
+- bulk actions if reasonable
+- drawers/modals for quick edits
+
+==================================================
+14. USER PAGES
+==================================================
+
+Create these user pages:
+
+1) Login
+
+2) User Dashboard
+- show name
+- show personnel number
+- show assigned accounts
+- show today status
+- show missing days
+- show admin notes
+- show wallet summary
+
+3) Daily Entry Page
+- list assigned Instagram accounts in a very easy input workflow
+- under each account allow adding reels links
+- support multiple links per account
+- edit/delete before submission
+- submit as completed
+- save as draft
+
+This page should be optimized for speed and repetitive daily use.
+
+4) History Page
+- past entries
+- statuses
+- admin notes
+- delay indicators if any
+- clear timeline/table layout
+
+5) Cekim Page
+- current wallet address
+- update wallet
+- wallet history
+- validation feedback
+
+==================================================
+15. REPORTING & EXPORT
+==================================================
+
+Add export functionality for admin.
+
+Formats:
+- CSV
+- XLSX
+
+Add export buttons on relevant pages:
+- Export CSV
+- Export Excel
+
+Exportable reports:
+- daily reels report
+- selected date review report
+- delayed users report
+- bulk flagged users report
+- user performance summary
+- wallet change history
+
+Allow filtering before export:
+- date range
+- user
+- status
+
+Filename examples:
+- daily_report_2026-04-09.xlsx
+- wallet_changes_2026-04-09.csv
+
+==================================================
+16. AUTHORIZATION & SECURITY
+==================================================
+
+Must include:
+- protected routes
+- role-based access control
+- hashed passwords with bcrypt
+- secure auth flow
+- input validation with Zod
+- sanitized inputs
+- audit logging for critical actions
+- rate limiting for wallet changes and excessive submissions
+
+Track audit logs for:
+- login
+- logout
+- user create/edit
+- password reset
+- account assignment changes
+- reels link add/edit/delete
+- report status changes
+- wallet address changes
+
+If possible, capture:
+- IP address
+- user agent
+
+==================================================
+17. UI DETAILS / DESIGN DIRECTION
+==================================================
+
+Use a strong dashboard design language.
+
+Recommended layout:
+- left sidebar
+- top header
+- page title + subtitle
+- filter bar
+- summary cards
+- data tables
+- detail drawer/modal
+- action buttons in consistent places
+
+Use clear status badges:
+- approved = green
+- missing = amber/yellow
+- rejected = red
+- late = orange
+- bulk_flagged = purple or attention style
+- active/passive clearly differentiated
+
+Use:
+- concise labels
+- readable tables
+- comfortable spacing
+- modern inputs
+- modern dialogs
+- modern dropdowns
+- clean pagination
+
+Avoid:
+- cluttered layouts
+- overly bright colors
+- generic bootstrap look
+- oversized forms
+- poor typography
+
+==================================================
+18. SAMPLE DATA / DEMO QUALITY
+==================================================
+
+Add realistic seed/demo data so the app looks complete immediately.
+
+Generate:
+- 1 admin user
+- 8-15 demo staff users
+- realistic personnel numbers
+- multiple Instagram accounts assigned
+- several days of daily reports
+- examples of approved/missing/rejected/late/bulk_flagged entries
+- several wallet changes and wallet history logs
+
+Make the demo data useful for showing the dashboard quality.
+
+==================================================
+19. MVP PRIORITY
+==================================================
+
+Prioritize building these in order:
+1. auth
+2. database schema
+3. user management
+4. instagram account assignment
+5. daily entry flow
+6. admin review flow
+7. wallet address management
+8. delay/bulk detection
+9. reporting/export
+10. dashboard polish
+
+==================================================
+20. DELIVERABLES
+==================================================
+
+Generate:
+- full database schema
+- migration files
+- seed script
+- backend API
+- frontend pages
+- reusable UI components
+- validation logic
+- export functionality
+- sample dashboard data
+- README with setup instructions
+
+Also create a good demo admin account.
+
+==================================================
+21. FINAL GOAL
+==================================================
+
+The final app should help an internal team:
+- track daily Instagram reels work
+- identify missing or delayed users
+- detect suspicious bulk entries
+- manage users by personnel number
+- safely monitor TRC20 wallet changes
+- operate everything from a single control panel
+
+IMPORTANT LANGUAGE REQUIREMENT:
+The entire application UI must be in Turkish.
+
+All user-facing elements must be Turkish, including:
+- page titles
+- menu items
+- buttons
+- tables
+- form labels
+- placeholders
+- validation messages
+- toast notifications
+- status labels
+- empty states
+- modal texts
+- export labels
+
+Use clear, professional, operational Turkish.
+Do not build the UI in English.
+
+Examples:
+- Dashboard -> Panel
+- User Management -> Kullanici Yonetimi
+- Daily Review -> Gunluk Kontrol
+- History -> Gecmis Kayitlar
+- Wallet -> Cekim
+- Export CSV -> CSV Indir
+- Export Excel -> Excel Indir
+- Approved -> Onaylandi
+- Missing -> Eksik
+- Rejected -> Reddedildi
+- Late -> Gecikmeli
+
+Build the app end-to-end.
+Make sensible implementation choices where needed, but do not remove any required feature above.
+
+Most importantly:
+make it look polished, modern, and actually usable in daily operations.

@@ -13,13 +13,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Wallet, ArrowRight, CheckCircle, AlertCircle, Edit2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 const TRC20_REGEX = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 
 const walletSchema = z.object({
   walletAddress: z.string()
-    .min(1, "Wallet address is required")
-    .refine(v => TRC20_REGEX.test(v), "Must be a valid TRC20 address (starts with T, exactly 34 characters)"),
+    .min(1, "Cüzdan adresi gerekli")
+    .refine(v => TRC20_REGEX.test(v), "Geçerli bir TRC20 adresi giriniz (T ile başlamalı, tam 34 karakter)"),
   note: z.string().optional(),
 });
 
@@ -43,11 +44,11 @@ export default function UserCekim() {
   function onSubmit(values: z.infer<typeof walletSchema>) {
     setMutation.mutate({ data: values }, {
       onSuccess: () => {
-        toast({ title: "Wallet address updated", description: "Your TRC20 address has been saved." });
+        toast({ title: "Cüzdan adresi güncellendi", description: "TRC20 adresiniz başarıyla kaydedildi." });
         setEditing(false);
         queryClient.invalidateQueries({ queryKey: getListWalletAddressesQueryKey({}) });
       },
-      onError: (e: any) => toast({ title: "Error", description: e?.message, variant: "destructive" }),
+      onError: (e: any) => toast({ title: "Hata", description: e?.message, variant: "destructive" }),
     });
   }
 
@@ -57,15 +58,15 @@ export default function UserCekim() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Wallet (Cekim)</h1>
-        <p className="text-sm text-muted-foreground">Manage your USDT TRC20 withdrawal address</p>
+        <h1 className="text-2xl font-bold tracking-tight">Cüzdan (Çekim)</h1>
+        <p className="text-sm text-muted-foreground">USDT TRC20 çekim adresinizi yönetin</p>
       </div>
 
       <Card className="border-card-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Wallet className="h-4 w-4" />
-            Current Wallet Address
+            Mevcut Cüzdan Adresi
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -76,7 +77,7 @@ export default function UserCekim() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="walletAddress" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>USDT TRC20 Address</FormLabel>
+                    <FormLabel>USDT TRC20 Adresi</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -97,25 +98,25 @@ export default function UserCekim() {
                     </FormControl>
                     <FormMessage />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Must start with T and be exactly 34 characters long
+                      T ile başlamalı ve tam 34 karakter olmalıdır
                       {field.value && <span className="ml-2 font-mono">{field.value.length}/34</span>}
                     </p>
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="note" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Note (optional)</FormLabel>
-                    <FormControl><Input placeholder="Add a note about this change" {...field} /></FormControl>
+                    <FormLabel>Not (isteğe bağlı)</FormLabel>
+                    <FormControl><Input placeholder="Bu değişiklik hakkında not ekleyin" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <div className="flex gap-2">
                   <Button type="submit" className="gap-2" disabled={setMutation.isPending}>
                     <CheckCircle className="h-4 w-4" />
-                    {currentWallet ? "Update Address" : "Save Address"}
+                    {currentWallet ? "Adresi Güncelle" : "Adresi Kaydet"}
                   </Button>
                   {editing && (
-                    <Button type="button" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+                    <Button type="button" variant="outline" onClick={() => setEditing(false)}>İptal</Button>
                   )}
                 </div>
               </form>
@@ -124,7 +125,7 @@ export default function UserCekim() {
             <div className="space-y-4">
               <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">TRC20 Address</p>
+                  <p className="text-xs text-muted-foreground mb-1">TRC20 Adresi</p>
                   <p className="font-mono text-sm break-all">{currentWallet.walletAddress}</p>
                 </div>
                 <WalletStatusBadge status={currentWallet.status} />
@@ -134,7 +135,7 @@ export default function UserCekim() {
                 form.setValue("walletAddress", currentWallet.walletAddress);
               }}>
                 <Edit2 className="h-3.5 w-3.5" />
-                Update Address
+                Adresi Güncelle
               </Button>
             </div>
           )}
@@ -143,23 +144,25 @@ export default function UserCekim() {
 
       <Card className="border-card-border">
         <CardHeader>
-          <CardTitle className="text-base">Change History</CardTitle>
+          <CardTitle className="text-base">Değişiklik Geçmişi</CardTitle>
         </CardHeader>
         <CardContent>
           {logsLoading ? (
             <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
           ) : sortedLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No wallet changes recorded</p>
+            <p className="text-sm text-muted-foreground text-center py-6">Henüz cüzdan değişikliği yok</p>
           ) : (
             <div className="space-y-2">
               {sortedLogs.map(log => (
                 <div key={log.id} className="flex items-center gap-3 rounded-lg border border-border p-3 text-sm flex-wrap">
                   <div className="flex items-center gap-2 font-mono text-xs flex-1 min-w-0">
-                    <span className="text-muted-foreground truncate">{log.oldWalletAddress ? `${log.oldWalletAddress.slice(0, 12)}...` : "New"}</span>
+                    <span className="text-muted-foreground truncate">{log.oldWalletAddress ? `${log.oldWalletAddress.slice(0, 12)}...` : "Yeni"}</span>
                     <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                     <span className="truncate">{log.newWalletAddress.slice(0, 12)}...</span>
                   </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{format(new Date(log.changedAt), "MMM dd yyyy, HH:mm")}</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {format(new Date(log.changedAt), "d MMM yyyy, HH:mm", { locale: tr })}
+                  </span>
                   {log.note && <p className="text-xs text-muted-foreground italic w-full">{log.note}</p>}
                 </div>
               ))}

@@ -1,9 +1,23 @@
 import { useListDailyReports } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ReportStatusBadge } from "@/components/status-badges";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Film, MessageSquare, AlertCircle, History } from "lucide-react";
 import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+
+function RaporDurumBadge({ status }: { status: string }) {
+  switch (status) {
+    case "draft":        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Taslak</Badge>;
+    case "submitted":   return <Badge className="bg-blue-100 text-blue-800">Gönderildi</Badge>;
+    case "approved":    return <Badge className="bg-green-100 text-green-800">Onaylandı</Badge>;
+    case "missing":     return <Badge className="bg-orange-100 text-orange-800">Eksik</Badge>;
+    case "rejected":    return <Badge className="bg-red-100 text-red-800">Reddedildi</Badge>;
+    case "late":        return <Badge className="bg-yellow-100 text-yellow-800">Geç</Badge>;
+    case "bulk_flagged":return <Badge className="bg-purple-100 text-purple-800">Toplu Giriş</Badge>;
+    default:            return <Badge variant="outline">{status}</Badge>;
+  }
+}
 
 export default function UserHistory() {
   const { data: reports, isLoading } = useListDailyReports({});
@@ -12,8 +26,8 @@ export default function UserHistory() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Submission History</h1>
-        <p className="text-sm text-muted-foreground">Your past daily reports</p>
+        <h1 className="text-2xl font-bold tracking-tight">Gönderim Geçmişi</h1>
+        <p className="text-sm text-muted-foreground">Geçmiş günlük raporlarınız</p>
       </div>
 
       {isLoading ? (
@@ -22,7 +36,7 @@ export default function UserHistory() {
         <Card className="border-card-border">
           <CardContent className="py-12 text-center text-muted-foreground">
             <History className="mx-auto mb-2 h-8 w-8 opacity-40" />
-            No submission history yet
+            Henüz gönderim geçmişi yok
           </CardContent>
         </Card>
       ) : (
@@ -33,19 +47,21 @@ export default function UserHistory() {
                 <div key={r.id} className="flex items-start justify-between gap-4 px-4 py-4 hover:bg-muted/30 transition-colors flex-wrap">
                   <div className="space-y-1">
                     <div className="flex items-center gap-3">
-                      <span className="font-medium">{format(new Date(r.date), "EEEE, MMM dd, yyyy")}</span>
-                      <ReportStatusBadge status={r.status} />
+                      <span className="font-medium">
+                        {format(new Date(r.date), "d MMMM yyyy, EEEE", { locale: tr })}
+                      </span>
+                      <RaporDurumBadge status={r.status} />
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Film className="h-3 w-3" />
-                        {r.itemCount} reel{r.itemCount !== 1 ? "s" : ""}
+                        {r.itemCount} reel
                       </span>
                       {r.submittedAt && (
-                        <span>Submitted: {format(new Date(r.submittedAt), "HH:mm")}</span>
+                        <span>Gönderildi: {format(new Date(r.submittedAt), "HH:mm")}</span>
                       )}
                       {r.approvedAt && (
-                        <span>Approved: {format(new Date(r.approvedAt), "MMM dd HH:mm")}</span>
+                        <span>Onaylandı: {format(new Date(r.approvedAt), "d MMM HH:mm", { locale: tr })}</span>
                       )}
                     </div>
                     {r.adminNote && (
@@ -57,7 +73,7 @@ export default function UserHistory() {
                     {(r.status === "late" || r.status === "bulk_flagged") && (
                       <div className="flex items-center gap-1.5 text-xs text-orange-600">
                         <AlertCircle className="h-3 w-3" />
-                        {r.status === "late" ? "This report was submitted late" : "Bulk entry detected"}
+                        {r.status === "late" ? "Bu rapor geç gönderildi" : "Toplu giriş tespit edildi"}
                       </div>
                     )}
                   </div>

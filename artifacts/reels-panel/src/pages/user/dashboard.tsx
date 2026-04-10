@@ -1,11 +1,23 @@
 import { useGetUserDashboardSummary } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ReportStatusBadge } from "@/components/status-badges";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AtSign, AlertCircle, Wallet, PlusCircle, Hash } from "lucide-react";
+
+function RaporDurumBadge({ status }: { status: string }) {
+  switch (status) {
+    case "draft":        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Taslak</Badge>;
+    case "submitted":   return <Badge className="bg-blue-100 text-blue-800">Gönderildi</Badge>;
+    case "approved":    return <Badge className="bg-green-100 text-green-800">Onaylandı</Badge>;
+    case "missing":     return <Badge className="bg-orange-100 text-orange-800">Eksik</Badge>;
+    case "rejected":    return <Badge className="bg-red-100 text-red-800">Reddedildi</Badge>;
+    case "late":        return <Badge className="bg-yellow-100 text-yellow-800">Geç</Badge>;
+    case "bulk_flagged":return <Badge className="bg-purple-100 text-purple-800">Toplu Giriş</Badge>;
+    default:            return <Badge variant="outline">{status}</Badge>;
+  }
+}
 
 export default function UserDashboard() {
   const { data, isLoading } = useGetUserDashboardSummary();
@@ -17,11 +29,11 @@ export default function UserDashboard() {
           <Skeleton className="h-8 w-48" />
         ) : (
           <>
-            <h1 className="text-2xl font-bold tracking-tight">Welcome, {data?.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Hoş Geldin, {data?.name}</h1>
             {data?.personnelNo && (
               <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                 <Hash className="h-3.5 w-3.5" />
-                Personnel Number: <span className="font-mono font-semibold">#{data.personnelNo}</span>
+                Sicil Numarası: <span className="font-mono font-semibold">#{data.personnelNo}</span>
               </p>
             )}
           </>
@@ -31,18 +43,18 @@ export default function UserDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="border-card-border">
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Today's Status</p>
+            <p className="text-sm text-muted-foreground">Bugünkü Durum</p>
             <div className="mt-2">
               {isLoading ? <Skeleton className="h-6 w-24" /> : (
-                data?.todayStatus ? <ReportStatusBadge status={data.todayStatus} /> : (
-                  <Badge variant="outline" className="bg-gray-100 text-gray-600">Not submitted</Badge>
+                data?.todayStatus ? <RaporDurumBadge status={data.todayStatus} /> : (
+                  <Badge variant="outline" className="bg-gray-100 text-gray-600">Gönderilmedi</Badge>
                 )
               )}
             </div>
             <Link href="/entry">
               <Button size="sm" className="mt-3 gap-1.5 w-full">
                 <PlusCircle className="h-3.5 w-3.5" />
-                {data?.todayStatus === "submitted" || data?.todayStatus === "approved" ? "View Entry" : "Submit Today"}
+                {data?.todayStatus === "submitted" || data?.todayStatus === "approved" ? "Girişi Gör" : "Bugünü Gönder"}
               </Button>
             </Link>
           </CardContent>
@@ -50,7 +62,7 @@ export default function UserDashboard() {
 
         <Card className="border-card-border">
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Missing Days</p>
+            <p className="text-sm text-muted-foreground">Eksik Günler</p>
             <div className="mt-2 flex items-center gap-2">
               {isLoading ? <Skeleton className="h-8 w-12" /> : (
                 <>
@@ -66,20 +78,20 @@ export default function UserDashboard() {
 
         <Card className="border-card-border">
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Wallet (Cekim)</p>
+            <p className="text-sm text-muted-foreground">Cüzdan (Çekim)</p>
             <div className="mt-2">
               {isLoading ? <Skeleton className="h-6 w-32" /> : (
                 data?.walletAddress ? (
                   <p className="font-mono text-sm truncate">{data.walletAddress.slice(0, 12)}...</p>
                 ) : (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Not set</Badge>
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Ayarlanmadı</Badge>
                 )
               )}
             </div>
             <Link href="/cekim">
               <Button size="sm" variant="outline" className="mt-3 gap-1.5 w-full">
                 <Wallet className="h-3.5 w-3.5" />
-                {data?.walletAddress ? "Manage Wallet" : "Add Wallet"}
+                {data?.walletAddress ? "Cüzdanı Yönet" : "Cüzdan Ekle"}
               </Button>
             </Link>
           </CardContent>
@@ -88,13 +100,13 @@ export default function UserDashboard() {
 
       <Card className="border-card-border">
         <CardHeader>
-          <CardTitle className="text-base">Assigned Instagram Accounts</CardTitle>
+          <CardTitle className="text-base">Atanan Instagram Hesapları</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
           ) : (data?.instagramAccounts.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted-foreground">No accounts assigned yet</p>
+            <p className="text-sm text-muted-foreground">Henüz hesap atanmadı</p>
           ) : (
             <div className="space-y-2">
               {data?.instagramAccounts.map(a => (
@@ -102,7 +114,7 @@ export default function UserDashboard() {
                   <AtSign className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">{a.instagramUsername}</span>
                   <Badge variant={a.status === "active" ? "default" : "secondary"} className={`ml-auto text-xs ${a.status === "active" ? "bg-green-100 text-green-800" : ""}`}>
-                    {a.status}
+                    {a.status === "active" ? "Aktif" : "Pasif"}
                   </Badge>
                 </div>
               ))}
@@ -114,7 +126,7 @@ export default function UserDashboard() {
       {(data?.adminNotes?.length ?? 0) > 0 && (
         <Card className="border-card-border border-l-4 border-l-blue-400">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Admin Notes</CardTitle>
+            <CardTitle className="text-base">Yönetici Notları</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {data?.adminNotes.map((note, i) => (

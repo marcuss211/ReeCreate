@@ -6,11 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ReportStatusBadge } from "@/components/status-badges";
 import { useToast } from "@/hooks/use-toast";
+
 import { Plus, Trash2, CheckCircle, Save, AtSign, Film, AlertCircle, Link, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+
+function RaporDurumBadge({ status }: { status: string }) {
+  switch (status) {
+    case "draft":        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Taslak</Badge>;
+    case "submitted":   return <Badge className="bg-blue-100 text-blue-800">Gönderildi</Badge>;
+    case "approved":    return <Badge className="bg-green-100 text-green-800">Onaylandı</Badge>;
+    case "rejected":    return <Badge className="bg-red-100 text-red-800">Reddedildi</Badge>;
+    case "late":        return <Badge className="bg-yellow-100 text-yellow-800">Geç</Badge>;
+    case "bulk_flagged":return <Badge className="bg-purple-100 text-purple-800">Toplu Giriş</Badge>;
+    default:            return <Badge variant="outline">{status}</Badge>;
+  }
+}
 
 const REELS_PATTERN = /instagram\.com\/reel(?:s)?\/([A-Za-z0-9_-]+)/;
 
@@ -162,12 +174,12 @@ export default function UserEntry() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Daily Entry</h1>
-          <p className="text-sm text-muted-foreground">Submit your daily Instagram Reels links</p>
+          <h1 className="text-2xl font-bold tracking-tight">Günlük Giriş</h1>
+          <p className="text-sm text-muted-foreground">Günlük Instagram Reels linklerinizi girin</p>
         </div>
         <div className="flex items-center gap-3">
           <Input type="date" value={date} max={today} onChange={e => setDate(e.target.value)} className="w-44" />
-          {reportDetail && <ReportStatusBadge status={reportDetail.status} />}
+          {reportDetail && <RaporDurumBadge status={reportDetail.status} />}
         </div>
       </div>
 
@@ -177,7 +189,7 @@ export default function UserEntry() {
         <Card className="border-card-border">
           <CardContent className="py-12 text-center text-muted-foreground">
             <AtSign className="mx-auto mb-2 h-8 w-8 opacity-40" />
-            No Instagram accounts assigned to you yet
+            Henüz hesap atanmadı
           </CardContent>
         </Card>
       ) : (
@@ -256,7 +268,7 @@ export default function UserEntry() {
                         onClick={() => handleAddItem(account.id)}
                         disabled={!reportReady || accountPending.some(p => p.saving)}>
                         {!reportReady ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        Add
+                        Ekle
                       </Button>
                     </div>
                     {urlErrors[account.id] && (
@@ -276,11 +288,11 @@ export default function UserEntry() {
         <div className="flex gap-3 pt-2">
           <Button className="gap-2" onClick={handleSubmit} disabled={updateMutation.isPending || pendingItems.some(p => p.saving)}>
             <CheckCircle className="h-4 w-4" />
-            Submit for Today
+            Bugünü Gönder
           </Button>
           <Button variant="outline" className="gap-2" disabled>
             <Save className="h-4 w-4" />
-            Auto-saved as Draft
+            Taslak olarak kaydedildi
           </Button>
         </div>
       )}
@@ -289,7 +301,7 @@ export default function UserEntry() {
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4">
           <CheckCircle className="h-5 w-5 text-green-600" />
           <p className="text-sm font-medium text-green-700">
-            Report submitted successfully. Awaiting admin review.
+            Rapor başarıyla gönderildi. Yönetici onayı bekleniyor.
           </p>
         </div>
       )}

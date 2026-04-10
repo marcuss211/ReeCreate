@@ -54,7 +54,7 @@ export default function UserDashboard() {
             <Link href="/entry">
               <Button size="sm" className="mt-3 gap-1.5 w-full">
                 <PlusCircle className="h-3.5 w-3.5" />
-                {data?.todayStatus === "submitted" || data?.todayStatus === "approved" ? "Girişi Gör" : "Bugünü Gönder"}
+                Reels Ekle
               </Button>
             </Link>
           </CardContent>

@@ -55,6 +55,11 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
 
   const { name, username, password, role, personnelNo } = parsed.data;
 
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters long" });
+    return;
+  }
+
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.username, username));
   if (existing) {
     res.status(400).json({ error: "Username already taken" });
@@ -217,6 +222,11 @@ router.post("/users/:id/reset-password", requireAdmin, async (req, res): Promise
   const parsed = ResetUserPasswordBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (parsed.data.newPassword.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters long" });
     return;
   }
 

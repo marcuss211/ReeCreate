@@ -1,0 +1,101 @@
+I want you to do a final security verification pass on the current project and check whether the security improvements were implemented correctly, completely, and safely.
+
+Do not give me only a high-level summary. I want a real code-level review of the current state of the project.
+
+Please inspect the existing codebase and verify all of the following:
+
+1. Session and authentication security
+- Confirm JWT is no longer stored in localStorage or sessionStorage
+- Confirm authentication now uses secure HttpOnly cookies correctly
+- Confirm cookie settings are safe for production (HttpOnly, Secure, SameSite, proper max age/path)
+- Confirm token/session lifetime is correctly reduced
+- Confirm SESSION_SECRET is required and the app refuses to start if it is missing or too weak
+- Confirm there is no insecure fallback secret left anywhere in the code
+
+2. Brute-force and login protection
+- Confirm failed login attempt tracking really works
+- Confirm lockout logic is correctly enforced after repeated failed attempts
+- Confirm failed login attempts are written to audit logs
+- Confirm login responses do not leak unnecessary information such as user enumeration clues
+
+3. Rate limiting
+- Confirm rate limiting is actually implemented in code, not only described
+- Show which middleware protects:
+  - login
+  - wallet change
+  - reel/report submission
+  - general API
+- Confirm the limits are applied only where intended and won’t break normal usage
+
+4. HTTP and API hardening
+- Confirm Helmet is enabled properly
+- Confirm production security headers are active
+- Confirm CORS is restricted by env configuration and not left permissive
+- Confirm production errors do not leak stack traces or sensitive internals
+- Confirm request body limits are safe
+
+5. Authorization and ownership control
+- Confirm server-side ownership checks exist
+- Confirm a normal user cannot submit reels for another user’s assigned Instagram account
+- Confirm admin-only routes are protected server-side
+- Check for any remaining horizontal privilege escalation risk
+
+6. URL and input validation
+- Confirm Instagram Reel URL validation is strict
+- Confirm shorteners, redirects, malformed links, and suspicious URLs are rejected
+- Confirm inputs are validated and sanitized where needed
+- Check whether duplicate spam submissions are still possible
+
+7. Wallet security
+- Confirm wallet change cooldown is really enforced
+- Confirm repeated wallet changes are logged
+- Check whether wallet changes need any additional protection
+- Identify whether there is still a fraud or abuse gap in the wallet flow
+
+8. Frontend security
+- Confirm no sensitive auth data remains exposed in the frontend
+- Confirm no secrets or unsafe config are leaked into the client bundle
+- Review whether frontend auth/session handling is consistent with the backend changes
+
+9. Missing critical protections
+Also specifically check whether these are already implemented or still missing:
+- CSRF protection for cookie-based auth
+- logout/session invalidation
+- refresh token or session rotation strategy
+- password strength policy
+- secure cookie flags
+- admin 2FA
+- suspicious activity detection
+- duplicate/fraud reel submission detection
+- database-level constraints for ownership/integrity
+
+10. Final output format
+I want the result in this exact structure:
+
+A) Implemented correctly
+- list each security improvement that is truly implemented and verified in code
+
+B) Implemented but needs improvement
+- list anything partially done, weakly implemented, or risky in edge cases
+
+C) Still missing
+- list all important security controls that are not yet implemented
+
+D) Changed files and proof
+- show the exact files related to each security feature
+- include relevant code snippets or explain the exact implementation points
+
+E) Manual verification checklist
+- provide step-by-step test cases for me to verify:
+  - HttpOnly cookie auth
+  - login lockout
+  - rate limiting
+  - CORS restrictions
+  - ownership control
+  - wallet cooldown
+  - URL validation
+  - production error masking
+
+Very important:
+Do not just repeat what was intended.
+Review the actual current codebase and tell me what is truly implemented, what is weak, and what is still missing.

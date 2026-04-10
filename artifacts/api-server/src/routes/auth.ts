@@ -10,6 +10,12 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
+// Pre-computed hash used when the requested user does not exist.
+// Calling bcrypt.compare against this dummy hash makes the response time
+// indistinguishable from a wrong-password attempt, preventing user enumeration
+// via timing differences.
+const DUMMY_HASH = "$2a$12$WKPRMHPVvRbNMnEu8yv0j.D0eH5R2NMOWZNQvPVJLk2PgC9rmN5Oq";
+
 interface LoginAttemptRecord {
   count: number;
   firstAttemptAt: Date;
@@ -112,11 +118,15 @@ router.post("/auth/login", loginRateLimit, async (req, res): Promise<void> => {
   };
 
   if (!user) {
+    // Always run bcrypt even for non-existent users to prevent timing-based
+    // user enumeration. The result is discarded.
+    await bcrypt.compare(password, DUMMY_HASH);
     await failResponse("user_not_found");
     return;
   }
 
   if (user.status !== "active") {
+    await bcrypt.compare(password, DUMMY_HASH);
     await failResponse("account_inactive");
     return;
   }

@@ -74,9 +74,34 @@ Production-ready full-stack Instagram Reels Tracking & Control Panel — an inte
 - `/history` — past report history with admin notes
 - `/cekim` — USDT TRC20 wallet address management with change history
 
+## Security Architecture
+
+- **Auth**: JWT signed with `SESSION_SECRET` (minimum 32 chars, hard-fail if missing), delivered via `HttpOnly; Secure; SameSite=Lax` cookie — not stored in `localStorage`
+- **Token expiry**: 4 hours (down from 7 days)
+- **Brute-force protection**: 10 failed login attempts per IP+username triggers 15-minute lockout; failed logins are audit-logged
+- **Rate limiting**: global 200 req/min (prod), login 10 req/min, wallet 5/hr, report-submit 30/min
+- **Helmet**: full HTTP security headers (CSP, HSTS, X-Frame-Options, nosniff, etc.)
+- **CORS**: restricted to `CORS_ORIGIN` env var in production; `credentials: true`
+- **Body size**: capped at 100 KB
+- **URL validation**: strict regex — only `https://www.instagram.com/reel/XXXX/`, no shorteners
+- **Account ownership**: report items validate that the Instagram account belongs to the authenticated user
+- **Wallet cooldown**: non-admin users can only change wallet address once per hour
+- **Global error handler**: stack traces suppressed in production
+- **Audit logs**: login, login_failed, logout, wallet changes, role changes, report actions
+
+## Required Environment Variables
+
+- `SESSION_SECRET` — JWT signing key, min 32 chars (app refuses to start without this)
+- `DATABASE_URL` — PostgreSQL connection string
+- `PORT` — server port (set by Replit automatically)
+- `CORS_ORIGIN` — (production) exact frontend URL for CORS
+- `NODE_ENV` — set to `production` in deployed environments
+- See `.env.example` for full documentation
+
 ## API Highlights
 
-- JWT auth in `Authorization: Bearer` header, stored in `localStorage["auth_token"]`
+- JWT auth delivered as HttpOnly cookie (set on login, cleared on logout)
+- Token also returned in login response body for type compatibility (not stored by frontend)
 - POST `/api/daily-reports` — idempotent create-or-return-existing for a given date
 - `/api/dashboard/summary` — admin stats
 - `/api/dashboard/user-summary` — user-facing stats

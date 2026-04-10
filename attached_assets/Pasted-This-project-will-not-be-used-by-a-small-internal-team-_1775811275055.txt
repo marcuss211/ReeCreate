@@ -1,0 +1,94 @@
+This project will not be used by a small internal team only. It will be used by hundreds of Instagram content users, and some of them may be malicious, abusive, or may try to exploit weak points in the system.
+
+I want you to review the current project from a production security perspective and implement the missing protections directly in the codebase, without breaking the current business flow.
+
+Main goal:
+Harden this project for real-world usage with hundreds of external users, including bad actors.
+
+Important:
+Do not only explain security suggestions. I want you to actually apply them in the project code where appropriate, update configuration, and clearly document what was changed.
+
+Please improve the project in these areas:
+
+1) Authentication and session security
+- Review the current auth flow completely
+- Remove any insecure fallback secret behavior
+- If an environment secret is missing, the app must fail safely instead of using a default secret
+- Reduce token risk
+- Prefer secure HttpOnly cookie-based auth if possible
+- If keeping JWT, make token expiry shorter and add refresh/session strategy
+- Add logout/session invalidation logic if missing
+- Prevent token theft and unsafe frontend storage practices
+
+2) Password and login protection
+- Add rate limiting to login endpoints
+- Add brute-force protection for repeated failed login attempts
+- Add basic account lock / cooldown after too many failed attempts
+- Enforce stronger password rules
+- Make sure passwords are always hashed securely
+- Review whether bcrypt settings are strong enough
+
+3) Role-based access control
+- Review all endpoints and make sure authorization is enforced server-side, not only in frontend
+- Ensure normal users can only access their own assigned data
+- Prevent horizontal privilege escalation
+- Keep admin-only actions fully protected
+- If useful, improve the role model beyond simple admin/user structure
+
+4) Input validation and abuse prevention
+- Validate and sanitize all incoming inputs
+- Especially validate Instagram/Reels URLs strictly
+- Reject malformed, shortener, redirect, or suspicious links if needed
+- Prevent duplicate spam submissions
+- Add protections against mass fake data entry
+- Ensure users cannot submit data for accounts not assigned to them
+
+5) Wallet/security-sensitive actions
+- Wallet address changes are sensitive
+- Add extra protections for wallet updates
+- Log every wallet change clearly
+- Add cooldown / review logic if appropriate
+- Consider requiring extra verification or admin approval for wallet changes
+- Flag suspicious repeated wallet modifications
+
+6) API and app hardening
+- Add proper CORS restrictions instead of permissive defaults
+- Add helmet and common secure HTTP headers
+- Review body size limits and request size handling
+- Add API rate limits not only for login, but also for sensitive or spam-prone endpoints
+- Make sure stack traces and sensitive errors are not leaked to users in production
+
+7) Audit logging and suspicious activity monitoring
+- Keep audit logs for important actions
+- Expand logging for:
+  - failed logins
+  - role changes
+  - wallet changes
+  - bulk or unusual submissions
+  - unauthorized access attempts
+- Add basic suspicious activity flags where useful
+- Make logs meaningful for admins, not just raw technical logs
+
+8) Frontend security
+- Review whether any sensitive values are stored unsafely in localStorage/sessionStorage
+- Reduce XSS risk
+- Improve frontend handling of auth/session securely
+- Avoid exposing secrets or internal configuration in the client bundle
+
+9) Production readiness
+- Review environment variable usage
+- Separate development-safe behavior from production-safe behavior
+- Add clear comments / documentation for required environment variables
+- Improve .env.example if needed
+- Make the app safer by default for deployment
+
+10) Final output requirements
+After implementing the improvements:
+- Give me a clear summary of what security issues were found
+- List exactly what you changed in backend and frontend
+- Mention any changes that may affect deployment
+- Mention any remaining risks that still need manual review
+- Keep the current business logic intact unless a change is necessary for security
+
+Very important:
+Do not just give recommendations. I want you to modify the codebase directly and make the project significantly safer for production usage with hundreds of users.

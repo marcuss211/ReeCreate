@@ -27,7 +27,7 @@ export default function Login() {
   const { user, login } = useAuth();
   const { toast } = useToast();
   const loginMutation = useLogin();
-  
+
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -43,19 +43,19 @@ export default function Login() {
   function onSubmit(values: z.infer<typeof loginSchema>) {
     loginMutation.mutate({ data: values }, {
       onSuccess: (data) => {
-        login(data.token, data.user);
+        login(data.user);
         toast({
-          title: "Login successful",
-          description: "Welcome back!",
+          title: "Giriş başarılı",
+          description: "Hoş geldiniz!",
         });
       },
       onError: (error) => {
         toast({
-          title: "Login failed",
-          description: error.message || "Invalid credentials",
+          title: "Giriş başarısız",
+          description: error.message || "Geçersiz kullanıcı adı veya şifre",
           variant: "destructive",
         });
-      }
+      },
     });
   }
 
@@ -66,9 +66,9 @@ export default function Login() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <Instagram className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Hoş Geldiniz</h1>
           <p className="text-sm text-muted-foreground">
-            Sign in to your account to continue
+            Devam etmek için giriş yapın
           </p>
         </div>
 
@@ -80,9 +80,9 @@ export default function Login() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel>Kullanıcı Adı</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your username" {...field} />
+                      <Input placeholder="Kullanıcı adınızı girin" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -93,9 +93,9 @@ export default function Login() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Şifre</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Enter your password" {...field} />
+                      <Input type="password" placeholder="Şifrenizi girin" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -105,7 +105,7 @@ export default function Login() {
                 {loginMutation.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Sign in
+                Giriş Yap
               </Button>
             </form>
           </Form>

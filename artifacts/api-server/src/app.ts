@@ -1,10 +1,16 @@
-import express, { type Express } from "express";
+import express, { type Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { globalRateLimit } from "./middlewares/rate-limit";
 
 const app: Express = express();
+
+const allowedOrigin = process.env.CORS_ORIGIN;
+const isProduction = process.env.NODE_ENV === "production";
 
 app.use(
   pinoHttp({
@@ -25,10 +31,64 @@ app.use(
     },
   }),
 );
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+
+app.use(
+  cors({
+    origin: allowedOrigin
+      ? allowedOrigin
+      : (origin, callback) => {
+          if (!origin || !isProduction) {
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+
+app.use(cookieParser());
+
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
+
+app.use(globalRateLimit);
 
 app.use("/api", router);
+
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof Error) {
+    logger.error({ err, url: req.url, method: req.method }, "Unhandled error");
+  }
+
+  if (isProduction) {
+    res.status(500).json({ error: "Internal server error" });
+  } else {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    res.status(500).json({ error: message, stack });
+  }
+});
 
 export default app;

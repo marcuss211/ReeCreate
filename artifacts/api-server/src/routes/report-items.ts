@@ -2,16 +2,22 @@ import { Router, type IRouter } from "express";
 import { db, reportItemsTable, dailyReportsTable, instagramAccountsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { reportSubmitRateLimit } from "../middlewares/rate-limit";
 import {
   CreateReportItemBody,
   DeleteReportItemParams,
 } from "@workspace/api-zod";
 
-const REELS_URL_REGEX = /instagram\.com\/reel(?:s)?\/[A-Za-z0-9_-]+/;
+const REELS_URL_REGEX = /^https?:\/\/(www\.)?instagram\.com\/(reel|reels)\/[A-Za-z0-9_-]{5,30}\/?(\?[^\s]*)?$/i;
 
 function normalizeReelsUrl(url: string): string {
   try {
     const parsed = new URL(url);
+
+    if (!["www.instagram.com", "instagram.com"].includes(parsed.hostname)) {
+      return url;
+    }
+
     const match = parsed.pathname.match(/\/(reel|reels)\/([A-Za-z0-9_-]+)/);
     if (match) {
       return `https://www.instagram.com/reel/${match[2]}/`;
@@ -24,7 +30,7 @@ function normalizeReelsUrl(url: string): string {
 
 const router: IRouter = Router();
 
-router.post("/report-items", requireAuth, async (req, res): Promise<void> => {
+router.post("/report-items", requireAuth, reportSubmitRateLimit, async (req, res): Promise<void> => {
   const parsed = CreateReportItemBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -34,7 +40,9 @@ router.post("/report-items", requireAuth, async (req, res): Promise<void> => {
   const { reportId, instagramAccountId, reelsUrl, contentDate } = parsed.data;
 
   if (!REELS_URL_REGEX.test(reelsUrl)) {
-    res.status(400).json({ error: "Invalid reels URL. Must contain instagram.com/reel/ or instagram.com/reels/" });
+    res.status(400).json({
+      error: "Geçersiz reel URL. URL şu formatta olmalıdır: https://www.instagram.com/reel/XXXX/",
+    });
     return;
   }
 
@@ -51,7 +59,26 @@ router.post("/report-items", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Check duplicate URL globally (only within the same report to allow re-use across dates)
+  const [account] = await db
+    .select()
+    .from(instagramAccountsTable)
+    .where(eq(instagramAccountsTable.id, instagramAccountId));
+
+  if (!account) {
+    res.status(400).json({ error: "Instagram hesabı bulunamadı" });
+    return;
+  }
+
+  if (account.status !== "active") {
+    res.status(400).json({ error: "Instagram hesabı aktif değil" });
+    return;
+  }
+
+  if (req.user?.role !== "admin" && account.userId !== req.user?.id) {
+    res.status(403).json({ error: "Bu Instagram hesabına erişim izniniz yok" });
+    return;
+  }
+
   const [duplicate] = await db
     .select()
     .from(reportItemsTable)
@@ -62,16 +89,6 @@ router.post("/report-items", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const [account] = await db
-    .select()
-    .from(instagramAccountsTable)
-    .where(eq(instagramAccountsTable.id, instagramAccountId));
-
-  if (!account) {
-    res.status(400).json({ error: "Instagram account not found" });
-    return;
-  }
-
   const [item] = await db.insert(reportItemsTable).values({
     reportId,
     instagramAccountId,
@@ -79,7 +96,6 @@ router.post("/report-items", requireAuth, async (req, res): Promise<void> => {
     contentDate,
   }).returning();
 
-  // If report was already submitted or approved, reset to submitted so admin reviews again
   if (report.status === "submitted" || report.status === "approved") {
     await db.update(dailyReportsTable)
       .set({ status: "submitted", submittedAt: new Date() })
@@ -117,7 +133,6 @@ router.delete("/report-items/:id", requireAuth, async (req, res): Promise<void> 
 
   await db.delete(reportItemsTable).where(eq(reportItemsTable.id, id));
 
-  // If report was submitted or approved, reset to submitted so admin reviews again
   if (report.status === "submitted" || report.status === "approved") {
     await db.update(dailyReportsTable)
       .set({ status: "submitted", submittedAt: new Date() })

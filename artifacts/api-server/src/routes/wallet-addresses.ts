@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { db, walletAddressesTable, walletAddressLogsTable, usersTable } from "@workspace/db";
-import { eq, gte } from "drizzle-orm";
+import { eq, gte, desc, and } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { createAuditLog } from "../lib/audit";
+import { walletRateLimit } from "../middlewares/rate-limit";
 import {
   SetWalletAddressBody,
   ListWalletAddressesQueryParams,
@@ -10,6 +11,8 @@ import {
 } from "@workspace/api-zod";
 
 const TRC20_REGEX = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
+
+const WALLET_CHANGE_COOLDOWN_MS = 60 * 60 * 1000;
 
 const router: IRouter = Router();
 
@@ -47,7 +50,7 @@ router.get("/wallet-addresses", requireAuth, async (req, res): Promise<void> => 
   res.json(wallets);
 });
 
-router.post("/wallet-addresses", requireAuth, async (req, res): Promise<void> => {
+router.post("/wallet-addresses", requireAuth, walletRateLimit, async (req, res): Promise<void> => {
   const parsed = SetWalletAddressBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -57,11 +60,38 @@ router.post("/wallet-addresses", requireAuth, async (req, res): Promise<void> =>
   const { walletAddress, note } = parsed.data;
 
   if (!TRC20_REGEX.test(walletAddress)) {
-    res.status(400).json({ error: "Invalid TRC20 address. Must start with T and be exactly 34 characters." });
+    res.status(400).json({ error: "Geçersiz TRC20 adresi. T ile başlamalı ve tam 34 karakter olmalıdır." });
     return;
   }
 
   const userId = req.user!.id;
+
+  if (req.user?.role !== "admin") {
+    const cooldownThreshold = new Date(Date.now() - WALLET_CHANGE_COOLDOWN_MS);
+    const [lastChange] = await db
+      .select()
+      .from(walletAddressLogsTable)
+      .where(
+        and(
+          eq(walletAddressLogsTable.userId, userId),
+          gte(walletAddressLogsTable.changedAt, cooldownThreshold),
+        ),
+      )
+      .orderBy(desc(walletAddressLogsTable.changedAt))
+      .limit(1);
+
+    if (lastChange) {
+      const remainingMs =
+        new Date(lastChange.changedAt!).getTime() + WALLET_CHANGE_COOLDOWN_MS - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+
+      res.status(429).json({
+        error: `Cüzdan adresinizi çok sık değiştiremezsiniz. Lütfen ${remainingMin} dakika sonra tekrar deneyin.`,
+      });
+      return;
+    }
+  }
+
   const [existing] = await db.select().from(walletAddressesTable).where(eq(walletAddressesTable.userId, userId));
 
   const oldAddress = existing?.walletAddress ?? null;

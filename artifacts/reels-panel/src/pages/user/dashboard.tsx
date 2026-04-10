@@ -33,7 +33,7 @@ export default function UserDashboard() {
             {data?.personnelNo && (
               <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                 <Hash className="h-3.5 w-3.5" />
-                Sicil Numarası: <span className="font-mono font-semibold">#{data.personnelNo}</span>
+                Kullanıcı Numarası: <span className="font-mono font-semibold">#{data.personnelNo}</span>
               </p>
             )}
           </>

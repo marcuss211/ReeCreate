@@ -54,7 +54,7 @@ export function UserLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex flex-col text-sm">
             <span className="font-medium">{user.name}</span>
-            <span className="text-xs text-sidebar-foreground/70">Sicil No: {user.personnelNo || "—"}</span>
+            <span className="text-xs text-sidebar-foreground/70">Kullanıcı No: {user.personnelNo || "—"}</span>
           </div>
         </div>
         <Button variant="ghost" className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={logout}>

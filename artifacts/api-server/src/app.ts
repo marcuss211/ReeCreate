@@ -51,17 +51,32 @@ app.use(
   }),
 );
 
+function isTrustedOrigin(origin: string): boolean {
+  if (allowedOrigin) return origin === allowedOrigin;
+  return (
+    origin.endsWith(".replit.app") ||
+    origin.endsWith(".repl.co") ||
+    origin.endsWith(".replit.dev")
+  );
+}
+
 app.use(
   cors({
-    origin: allowedOrigin
-      ? allowedOrigin
-      : (origin, callback) => {
-          if (!origin || !isProduction) {
-            callback(null, true);
-          } else {
-            callback(new Error("Not allowed by CORS"));
-          }
-        },
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (!isProduction) {
+        callback(null, true);
+        return;
+      }
+      if (isTrustedOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

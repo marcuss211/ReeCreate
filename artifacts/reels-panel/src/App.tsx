@@ -16,6 +16,8 @@ import AdminMonitoring from "@/pages/admin/monitoring";
 import AdminWallets from "@/pages/admin/wallets";
 import AdminAudit from "@/pages/admin/audit";
 import AdminExport from "@/pages/admin/export";
+import TwoFactorSetup from "@/pages/admin/two-factor-setup";
+import TwoFactorVerify from "@/pages/admin/two-factor-verify";
 import UserDashboard from "@/pages/user/dashboard";
 import UserEntry from "@/pages/user/entry";
 import UserHistory from "@/pages/user/history";
@@ -35,6 +37,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/admin/2fa-setup" component={TwoFactorSetup} />
+      <Route path="/admin/2fa-verify" component={TwoFactorVerify} />
       <Route path="/" component={() => <Redirect to="/dashboard" />} />
 
       <Route path="/admin" component={() => <Redirect to="/admin/dashboard" />} />

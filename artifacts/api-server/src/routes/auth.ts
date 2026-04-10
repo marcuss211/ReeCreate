@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth, signToken, AUTH_COOKIE_NAME, AUTH_COOKIE_OPTIONS } from "../middlewares/auth";
+import { signPreAuthToken, PRE_AUTH_COOKIE_NAME, PRE_AUTH_COOKIE_OPTIONS } from "../middlewares/preauth";
 import { createAuditLog } from "../lib/audit";
 import { LoginBody } from "@workspace/api-zod";
 import { loginRateLimit } from "../middlewares/rate-limit";
@@ -118,8 +119,6 @@ router.post("/auth/login", loginRateLimit, async (req, res): Promise<void> => {
   };
 
   if (!user) {
-    // Always run bcrypt even for non-existent users to prevent timing-based
-    // user enumeration. The result is discarded.
     await bcrypt.compare(password, DUMMY_HASH);
     await failResponse("user_not_found");
     return;
@@ -139,7 +138,39 @@ router.post("/auth/login", loginRateLimit, async (req, res): Promise<void> => {
 
   clearAttempts(attemptKey);
 
-  const token = signToken({ id: user.id, username: user.username, role: user.role, name: user.name });
+  // Admin users must complete 2FA before receiving a full session cookie
+  if (user.role === "admin") {
+    const preAuthToken = signPreAuthToken({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      name: user.name,
+    });
+
+    res.cookie(PRE_AUTH_COOKIE_NAME, preAuthToken, PRE_AUTH_COOKIE_OPTIONS);
+
+    await createAuditLog({
+      userId: user.id,
+      actionType: "login_password_ok",
+      newValue: JSON.stringify({ twoFactorEnabled: user.twoFactorEnabled }),
+      req,
+    });
+
+    if (!user.twoFactorEnabled) {
+      res.json({ status: "2fa_setup_required" });
+    } else {
+      res.json({ status: "2fa_required" });
+    }
+    return;
+  }
+
+  // Normal users: issue full session immediately
+  const token = signToken({
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    name: user.name,
+  });
 
   res.cookie(AUTH_COOKIE_NAME, token, AUTH_COOKIE_OPTIONS);
 

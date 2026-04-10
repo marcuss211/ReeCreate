@@ -1,0 +1,88 @@
+I want you to implement mandatory Google Authenticator 2FA (TOTP) for admin users only.
+
+This is not optional. Any admin account must complete 2FA setup and must pass 2FA verification before being fully logged in or allowed to access admin-protected areas.
+
+Requirements:
+
+1. Scope
+- Apply 2FA only to admin users
+- Keep the current login flow unchanged for normal users
+- Admin users must not be able to bypass 2FA
+
+2. Technology
+- Use TOTP compatible with Google Authenticator
+- Use `speakeasy` for secret generation and token verification
+- Use `qrcode` to generate a QR code for setup
+
+3. Database changes
+- Add fields to the user model for:
+  - `twoFactorEnabled` (boolean)
+  - `twoFactorSecret` (string, nullable until setup)
+- If useful, also add:
+  - `twoFactorSetupCompletedAt`
+  - `twoFactorLastVerifiedAt`
+
+4. Admin login flow
+- Admin enters username + password
+- If credentials are valid and 2FA is not set up yet:
+  - return a response that requires 2FA setup
+  - generate a TOTP secret
+  - store the secret temporarily or persist it safely for setup
+  - return a QR code and manual setup key
+- Admin scans the QR with Google Authenticator
+- Admin enters the 6-digit code
+- Verify the code
+- Only after successful verification:
+  - mark 2FA as enabled
+  - allow full login / session completion
+
+5. Admin login after setup
+- After username + password succeeds for an admin with 2FA enabled:
+  - do not complete login immediately
+  - require a valid 6-digit TOTP code
+- Only after correct TOTP verification:
+  - issue the final authenticated session/cookie
+  - allow access to admin routes
+
+6. Security requirements
+- Do not expose the TOTP secret after setup except for the initial setup screen
+- Keep the secret stored securely
+- Do not allow admin session creation before 2FA passes
+- Make sure server-side middleware/admin route protection respects full 2FA completion
+- Handle invalid or expired codes safely
+- Add rate limiting for 2FA verification attempts
+- Add audit log entries for:
+  - 2FA setup started
+  - 2FA setup completed
+  - 2FA verification success
+  - 2FA verification failure
+
+7. Frontend requirements
+- Add the necessary UI flow for admin users:
+  - 2FA setup screen with QR code
+  - manual secret key display
+  - TOTP code entry form
+  - post-password login TOTP verification screen
+- Keep the UX simple and clear
+
+8. API requirements
+Implement whatever endpoints are needed, for example:
+- initiate 2FA setup
+- verify initial setup code
+- verify login TOTP code
+
+9. Output requirements
+After implementation, show me:
+- changed files
+- database/schema changes
+- backend flow
+- frontend flow
+- exact admin login flow from start to finish
+- manual test steps
+- any env or migration steps I need to run
+
+Important:
+- Do not just describe the solution
+- Implement it directly in the current project
+- Do not rebuild the whole auth system from scratch unless necessary
+- Preserve the existing business logic for normal users

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -16,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Instagram, Loader2 } from "lucide-react";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -26,6 +25,7 @@ const loginSchema = z.object({
 export default function Login() {
   const { user, login } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const loginMutation = useLogin();
 
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -43,11 +43,25 @@ export default function Login() {
   function onSubmit(values: z.infer<typeof loginSchema>) {
     loginMutation.mutate({ data: values }, {
       onSuccess: (data) => {
-        login(data.user);
-        toast({
-          title: "Giriş başarılı",
-          description: "Hoş geldiniz!",
-        });
+        const response = data as unknown as Record<string, unknown>;
+
+        if (response.status === "2fa_setup_required") {
+          setLocation("/admin/2fa-setup");
+          return;
+        }
+
+        if (response.status === "2fa_required") {
+          setLocation("/admin/2fa-verify");
+          return;
+        }
+
+        if (response.user) {
+          login(response.user as Parameters<typeof login>[0]);
+          toast({
+            title: "Giriş başarılı",
+            description: "Hoş geldiniz!",
+          });
+        }
       },
       onError: (error) => {
         toast({

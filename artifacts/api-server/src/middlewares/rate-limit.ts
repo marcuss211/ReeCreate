@@ -35,3 +35,11 @@ export const reportSubmitRateLimit = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many report submissions, please slow down." },
 });
+
+export const twoFactorRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many verification attempts. Please try again in 15 minutes." },
+});

@@ -51,19 +51,14 @@ router.post("/report-items", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  if (report.status === "submitted" || report.status === "approved") {
-    res.status(400).json({ error: "Cannot add items to a submitted or approved report" });
-    return;
-  }
-
-  // Check duplicate URL globally
+  // Check duplicate URL globally (only within the same report to allow re-use across dates)
   const [duplicate] = await db
     .select()
     .from(reportItemsTable)
-    .where(eq(reportItemsTable.reelsUrl, normalizedUrl));
+    .where(and(eq(reportItemsTable.reelsUrl, normalizedUrl), eq(reportItemsTable.reportId, reportId)));
 
   if (duplicate) {
-    res.status(400).json({ error: "This reels URL has already been submitted" });
+    res.status(400).json({ error: "Bu reel zaten bu rapora eklenmiş" });
     return;
   }
 
@@ -83,6 +78,13 @@ router.post("/report-items", requireAuth, async (req, res): Promise<void> => {
     reelsUrl: normalizedUrl,
     contentDate,
   }).returning();
+
+  // If report was already submitted or approved, reset to submitted so admin reviews again
+  if (report.status === "submitted" || report.status === "approved") {
+    await db.update(dailyReportsTable)
+      .set({ status: "submitted", submittedAt: new Date() })
+      .where(eq(dailyReportsTable.id, reportId));
+  }
 
   res.status(201).json(item);
 });
@@ -113,12 +115,15 @@ router.delete("/report-items/:id", requireAuth, async (req, res): Promise<void> 
     return;
   }
 
+  await db.delete(reportItemsTable).where(eq(reportItemsTable.id, id));
+
+  // If report was submitted or approved, reset to submitted so admin reviews again
   if (report.status === "submitted" || report.status === "approved") {
-    res.status(400).json({ error: "Cannot delete items from a submitted or approved report" });
-    return;
+    await db.update(dailyReportsTable)
+      .set({ status: "submitted", submittedAt: new Date() })
+      .where(eq(dailyReportsTable.id, item.reportId));
   }
 
-  await db.delete(reportItemsTable).where(eq(reportItemsTable.id, id));
   res.sendStatus(204);
 });
 

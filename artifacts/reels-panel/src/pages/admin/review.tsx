@@ -10,9 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { ReportStatusBadge } from "@/components/status-badges";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, AlertCircle, Eye, Film, AtSign } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle, XCircle, AlertCircle, Eye, Film, AtSign, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminReview() {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -154,12 +154,20 @@ export default function AdminReview() {
               ) : (
                 <div className="space-y-2">
                   {reportDetail.items.map(item => (
-                    <div key={item.id} className="flex items-center gap-2 rounded-lg border border-border p-3">
-                      <AtSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-sm text-muted-foreground">{item.instagramUsername ?? "unknown"}</span>
-                      <a href={item.reelsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">
-                        {item.reelsUrl}
-                      </a>
+                    <div key={item.id} className="flex items-start gap-2 rounded-lg border border-border p-3">
+                      <AtSign className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-muted-foreground font-medium">{item.instagramUsername ?? "unknown"}</span>
+                        </div>
+                        <a href={item.reelsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate block">
+                          {item.reelsUrl}
+                        </a>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {(() => { try { return format(new Date(item.enteredAt ?? item.createdAt), "dd.MM.yyyy HH:mm"); } catch { return item.enteredAt ?? item.createdAt; } })()}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>

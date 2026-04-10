@@ -8,14 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
-import { Plus, Trash2, CheckCircle, Save, AtSign, Film, AlertCircle, Link, Loader2 } from "lucide-react";
+import { Plus, Trash2, CheckCircle, Save, AtSign, Film, AlertCircle, Link, Loader2, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function RaporDurumBadge({ status }: { status: string }) {
   switch (status) {
     case "draft":        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Taslak</Badge>;
-    case "submitted":   return <Badge className="bg-blue-100 text-blue-800">Gönderildi</Badge>;
+    case "submitted":   return <Badge className="bg-blue-100 text-blue-800">Onay Bekliyor</Badge>;
     case "approved":    return <Badge className="bg-green-100 text-green-800">Onaylandı</Badge>;
     case "rejected":    return <Badge className="bg-red-100 text-red-800">Reddedildi</Badge>;
     case "late":        return <Badge className="bg-yellow-100 text-yellow-800">Geç</Badge>;
@@ -24,12 +24,62 @@ function RaporDurumBadge({ status }: { status: string }) {
   }
 }
 
+function StatusMessage({ status }: { status: string }) {
+  if (status === "draft") return null;
+
+  if (status === "approved") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4">
+        <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+        <p className="text-sm font-medium text-green-700">Rapor onaylandı.</p>
+      </div>
+    );
+  }
+
+  if (status === "submitted" || status === "late") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <Clock className="h-5 w-5 text-blue-600 shrink-0" />
+        <p className="text-sm font-medium text-blue-700">Rapor gönderildi. Yönetici onayı bekleniyor.</p>
+      </div>
+    );
+  }
+
+  if (status === "rejected") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4">
+        <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
+        <p className="text-sm font-medium text-red-700">Rapor reddedildi. Yeni reels ekleyebilirsiniz.</p>
+      </div>
+    );
+  }
+
+  if (status === "missing") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+        <p className="text-sm font-medium text-amber-700">Rapor eksik işaretlendi. Lütfen eksik reelsleri ekleyiniz.</p>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 const REELS_PATTERN = /instagram\.com\/reel(?:s)?\/([A-Za-z0-9_-]+)/;
 
 function normalizeReelUrl(url: string): string | null {
   const m = url.match(REELS_PATTERN);
   if (!m) return null;
   return `https://www.instagram.com/reel/${m[1]}/`;
+}
+
+function formatEnteredAt(dateStr: string): string {
+  try {
+    return format(new Date(dateStr), "dd.MM.yyyy HH:mm");
+  } catch {
+    return dateStr;
+  }
 }
 
 interface PendingItem {
@@ -75,16 +125,14 @@ export default function UserEntry() {
     if (reportId) queryClient.invalidateQueries({ queryKey: getGetDailyReportQueryKey(reportId) });
   }
 
-  function validateUrl(url: string, accountId: number, existingItems: typeof items): string | null {
+  function validateUrl(url: string, accountId: number): string | null {
     if (!url.trim()) return "URL gerekli";
     const normalized = normalizeReelUrl(url);
     if (!normalized) return "Geçerli bir Instagram Reels linki giriniz (instagram.com/reel/...)";
 
-    // Duplicate check: all confirmed items across all accounts
     const isDuplicateConfirmed = items.some(i => normalizeReelUrl(i.reelsUrl) === normalized);
     if (isDuplicateConfirmed) return "Bu reel zaten eklenmiş";
 
-    // Duplicate check: pending (optimistic) items
     const isDuplicatePending = pendingRef.current.some(
       p => !p.error && normalizeReelUrl(p.reelsUrl) === normalized
     );
@@ -96,7 +144,7 @@ export default function UserEntry() {
   function handleAddItem(accountId: number) {
     if (!reportId) return;
     const rawUrl = (newUrls[accountId] ?? "").trim();
-    const error = validateUrl(rawUrl, accountId, items);
+    const error = validateUrl(rawUrl, accountId);
     if (error) {
       setUrlErrors(prev => ({ ...prev, [accountId]: error }));
       return;
@@ -105,7 +153,6 @@ export default function UserEntry() {
     const normalized = normalizeReelUrl(rawUrl)!;
     const tempId = `temp-${Date.now()}-${Math.random()}`;
 
-    // Optimistic: add immediately to UI
     setPendingItems(prev => [...prev, { tempId, instagramAccountId: accountId, reelsUrl: normalized, saving: true }]);
     setNewUrls(prev => ({ ...prev, [accountId]: "" }));
     setUrlErrors(prev => ({ ...prev, [accountId]: "" }));
@@ -119,7 +166,6 @@ export default function UserEntry() {
       }
     }, {
       onSuccess: () => {
-        // Remove pending item — real data comes from invalidate
         setPendingItems(prev => prev.filter(p => p.tempId !== tempId));
         invalidate();
       },
@@ -128,7 +174,6 @@ export default function UserEntry() {
         setPendingItems(prev => prev.map(p =>
           p.tempId === tempId ? { ...p, saving: false, error: msg } : p
         ));
-        // Restore URL in input so user can retry
         setNewUrls(prev => ({ ...prev, [accountId]: normalized }));
       }
     });
@@ -162,7 +207,8 @@ export default function UserEntry() {
   }
 
   const reportReady = !!reportId && !createReportMutation.isPending;
-  const isSubmitted = reportDetail?.status === "submitted" || reportDetail?.status === "approved";
+  const currentStatus = reportDetail?.status ?? "draft";
+  const isDraft = currentStatus === "draft";
   const items = reportDetail?.items ?? [];
   const itemsByAccount = items.reduce<Record<number, typeof items>>((acc, item) => {
     if (!acc[item.instagramAccountId]) acc[item.instagramAccountId] = [];
@@ -213,18 +259,22 @@ export default function UserEntry() {
               <CardContent className="space-y-3">
                 {/* Confirmed items */}
                 {accountItems.map(item => (
-                  <div key={item.id} className="flex items-center gap-2 rounded-lg bg-muted/40 p-2.5">
-                    <Link className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <a href={item.reelsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1">
-                      {item.reelsUrl}
-                    </a>
-                    {!isSubmitted && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDelete(item.id)}
-                        disabled={deleteItemMutation.isPending}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                  <div key={item.id} className="flex items-start gap-2 rounded-lg bg-muted/40 p-2.5">
+                    <Link className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <a href={item.reelsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate block">
+                        {item.reelsUrl}
+                      </a>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Clock className="h-3 w-3" />
+                        {formatEnteredAt(item.enteredAt ?? item.createdAt)}
+                      </span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDelete(item.id)}
+                      disabled={deleteItemMutation.isPending}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 ))}
 
@@ -248,43 +298,43 @@ export default function UserEntry() {
                   </div>
                 ))}
 
-                {!isSubmitted && (
-                  <div className="space-y-1">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder={reportReady ? "https://www.instagram.com/reel/..." : "Yükleniyor..."}
-                        value={newUrls[account.id] ?? ""}
-                        disabled={!reportReady}
-                        onChange={e => {
-                          setNewUrls(prev => ({ ...prev, [account.id]: e.target.value }));
-                          setUrlErrors(prev => ({ ...prev, [account.id]: "" }));
-                        }}
-                        onKeyDown={e => e.key === "Enter" && handleAddItem(account.id)}
-                        className={urlErrors[account.id] ? "border-red-400" : ""}
-                      />
-                      <Button
-                        size="sm"
-                        className="gap-1.5 shrink-0"
-                        onClick={() => handleAddItem(account.id)}
-                        disabled={!reportReady || accountPending.some(p => p.saving)}>
-                        {!reportReady ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        Ekle
-                      </Button>
-                    </div>
-                    {urlErrors[account.id] && (
-                      <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" /> {urlErrors[account.id]}
-                      </p>
-                    )}
+                {/* Input form — always visible */}
+                <div className="space-y-1">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={reportReady ? "https://www.instagram.com/reel/..." : "Yükleniyor..."}
+                      value={newUrls[account.id] ?? ""}
+                      disabled={!reportReady}
+                      onChange={e => {
+                        setNewUrls(prev => ({ ...prev, [account.id]: e.target.value }));
+                        setUrlErrors(prev => ({ ...prev, [account.id]: "" }));
+                      }}
+                      onKeyDown={e => e.key === "Enter" && handleAddItem(account.id)}
+                      className={urlErrors[account.id] ? "border-red-400" : ""}
+                    />
+                    <Button
+                      size="sm"
+                      className="gap-1.5 shrink-0"
+                      onClick={() => handleAddItem(account.id)}
+                      disabled={!reportReady || accountPending.some(p => p.saving)}>
+                      {!reportReady ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Ekle
+                    </Button>
                   </div>
-                )}
+                  {urlErrors[account.id] && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> {urlErrors[account.id]}
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
         })
       )}
 
-      {!isSubmitted && activeAccounts.length > 0 && reportDetail && (
+      {/* Submit button — only shown when status is draft */}
+      {isDraft && activeAccounts.length > 0 && reportDetail && (
         <div className="flex gap-3 pt-2">
           <Button className="gap-2" onClick={handleSubmit} disabled={updateMutation.isPending || pendingItems.some(p => p.saving)}>
             <CheckCircle className="h-4 w-4" />
@@ -297,14 +347,8 @@ export default function UserEntry() {
         </div>
       )}
 
-      {isSubmitted && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4">
-          <CheckCircle className="h-5 w-5 text-green-600" />
-          <p className="text-sm font-medium text-green-700">
-            Rapor başarıyla gönderildi. Yönetici onayı bekleniyor.
-          </p>
-        </div>
-      )}
+      {/* Dynamic status message */}
+      {reportDetail && <StatusMessage status={currentStatus} />}
     </div>
   );
 }

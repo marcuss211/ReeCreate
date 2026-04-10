@@ -1,0 +1,49 @@
+Aşağıdaki ekran için şu akış değişikliklerini yap:
+
+MEVCUT SORUNLAR:
+1. Kullanıcı bir gün için reels linklerini girip onaya gönderdikten sonra, aynı güne tekrar giriş yapıp yeni reels ekleyemiyor.
+2. Yönetici onayı alındığı halde altta “Rapor başarıyla gönderildi. Yönetici onayı bekleniyor.” mesajı görünmeye devam ediyor.
+3. Girilen reels kayıtlarında hangi tarihte eklendiği yeterince net görünmüyor.
+
+İSTENEN YENİ DAVRANIŞ:
+1. Kullanıcı günlük giriş ekranına her girdiğinde, ilgili tarih için daha önce eklediği reelsleri görebilmeli.
+2. Kullanıcı onaya göndermiş olsa bile, aynı tarih için tekrar yeni reels linki ekleyebilmeli.
+3. Yani sistem tek seferlik kilitlenmemeli. Gün içinde aynı tarihe birden fazla kez giriş yapıp yeni reels ekleyebilmelidir.
+4. Her eklenen reels kaydı için eklenme tarihi görünmeli. Mümkünse her hesap başlığında veya her link satırında:
+   - Eklenme tarihi
+   - Gerekirse eklenme saati
+   gösterilsin.
+5. Yönetici tarafı bu kayıtları tarih bazlı kontrol edebilmeli.
+6. Kullanıcı “onaya gönder” yaptığında kayıtlar yönetici incelemesine düşsün, ama kullanıcıya tamamen kilit koyulmasın.
+7. Eğer yönetici henüz onay vermediyse durum:
+   - “Onay bekliyor”
+   olarak gösterilsin.
+8. Eğer yönetici onay verdiyse durum:
+   - “Onaylandı”
+   olarak gösterilsin.
+9. Yönetici onayı verildikten sonra alttaki eski yeşil bilgi kutusunda hala
+   “Rapor başarıyla gönderildi. Yönetici onayı bekleniyor.”
+   yazmamalı.
+10. Bu mesaj dinamik olmalı:
+   - Bekliyorsa: “Rapor gönderildi. Yönetici onayı bekleniyor.”
+   - Onaylandıysa: “Rapor onaylandı.”
+   - Yeni ekleme yapıldıysa ve tekrar incelemeye düştüyse uygun şekilde tekrar “Onay bekliyor” durumuna dönebilmeli.
+
+İŞ KURALI:
+- Kullanıcı aynı gün için reels eklemeye devam edebilir.
+- Her yeni ekleme kayıt altına alınır.
+- Yönetici, o tarihe ait tüm reels girişlerini görür ve kontrol eder.
+- Durum sistemi sabit text değil, gerçek onay durumuna göre çalışmalıdır.
+
+UI/UX İSTEĞİ:
+- Tarih seçici aktif kalsın.
+- Seçilen tarihe ait kayıtlar listelensin.
+- Her kullanıcı / Instagram hesabı altında o güne ait reels linkleri görünmeye devam etsin.
+- “Kaç reels girildi” bilgisi kalsın ama kayıt tarihi de görünsün.
+- Durum badge’i ve alt bilgi kutusu birbiriyle tutarlı olsun.
+
+LÜTFEN:
+- Bu akışı hem frontend hem backend mantığında düzelt.
+- Gerekirse veri modelini şu mantıkla güncelle:
+  user / instagram_account / selected_date / reels_links[] / status / approved_by / approved_at / created_at / updated_at
+- Amaç: günlük giriş yapılabilsin, sonradan ekleme yapılabilsin, yönetici doğru şekilde kontrol etsin, yanlış “bekleniyor” mesajı kalmasın.

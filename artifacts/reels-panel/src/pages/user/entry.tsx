@@ -108,7 +108,7 @@ export default function UserEntry() {
 
   const createReportMutation = useCreateDailyReport();
   const { data: reportDetail, isLoading: reportLoading } = useGetDailyReport(reportId ?? 0, {
-    query: { queryKey: ["daily-report-detail", reportId], enabled: !!reportId }
+    query: { enabled: !!reportId }
   });
   const updateMutation = useUpdateDailyReport();
   const addItemMutation = useCreateReportItem();

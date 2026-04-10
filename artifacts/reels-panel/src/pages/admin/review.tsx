@@ -24,7 +24,7 @@ export default function AdminReview() {
 
   const { data: reports, isLoading } = useListDailyReports({ date });
   const { data: reportDetail } = useGetDailyReport(selectedReportId ?? 0, {
-    query: { queryKey: ["daily-report-detail", selectedReportId], enabled: !!selectedReportId }
+    query: { enabled: !!selectedReportId }
   });
   const updateMutation = useUpdateDailyReport();
 

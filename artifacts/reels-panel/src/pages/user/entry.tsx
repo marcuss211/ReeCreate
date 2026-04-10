@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useListInstagramAccounts, useCreateDailyReport, useGetDailyReport, useUpdateDailyReport, useCreateReportItem, useDeleteReportItem, getGetDailyReportQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,11 +8,25 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ReportStatusBadge } from "@/components/status-badges";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, CheckCircle, Save, AtSign, Film, AlertCircle, Link } from "lucide-react";
+import { Plus, Trash2, CheckCircle, Save, AtSign, Film, AlertCircle, Link, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const REELS_PATTERN = /instagram\.com\/reel(?:s)?\/[A-Za-z0-9_-]+/;
+const REELS_PATTERN = /instagram\.com\/reel(?:s)?\/([A-Za-z0-9_-]+)/;
+
+function normalizeReelUrl(url: string): string | null {
+  const m = url.match(REELS_PATTERN);
+  if (!m) return null;
+  return `https://www.instagram.com/reel/${m[1]}/`;
+}
+
+interface PendingItem {
+  tempId: string;
+  instagramAccountId: number;
+  reelsUrl: string;
+  saving: boolean;
+  error?: string;
+}
 
 export default function UserEntry() {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -20,9 +34,12 @@ export default function UserEntry() {
   const [reportId, setReportId] = useState<number | null>(null);
   const [newUrls, setNewUrls] = useState<Record<number, string>>({});
   const [urlErrors, setUrlErrors] = useState<Record<number, string>>({});
+  const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const pendingRef = useRef(pendingItems);
+  pendingRef.current = pendingItems;
 
   const { data: accounts, isLoading: accountsLoading } = useListInstagramAccounts({});
   const activeAccounts = (accounts ?? []).filter(a => a.status === "active");
@@ -36,7 +53,7 @@ export default function UserEntry() {
   const deleteItemMutation = useDeleteReportItem();
 
   useEffect(() => {
-    // Create or fetch report for selected date
+    setPendingItems([]);
     createReportMutation.mutate({ data: { date } }, {
       onSuccess: (report) => setReportId(report.id),
     });
@@ -46,59 +63,93 @@ export default function UserEntry() {
     if (reportId) queryClient.invalidateQueries({ queryKey: getGetDailyReportQueryKey(reportId) });
   }
 
-  function validateUrl(url: string): string | null {
-    if (!url.trim()) return "URL is required";
-    if (!REELS_PATTERN.test(url)) return "Must be a valid Instagram Reels URL (instagram.com/reel/...)";
+  function validateUrl(url: string, accountId: number, existingItems: typeof items): string | null {
+    if (!url.trim()) return "URL gerekli";
+    const normalized = normalizeReelUrl(url);
+    if (!normalized) return "Geçerli bir Instagram Reels linki giriniz (instagram.com/reel/...)";
+
+    // Duplicate check: all confirmed items across all accounts
+    const isDuplicateConfirmed = items.some(i => normalizeReelUrl(i.reelsUrl) === normalized);
+    if (isDuplicateConfirmed) return "Bu reel zaten eklenmiş";
+
+    // Duplicate check: pending (optimistic) items
+    const isDuplicatePending = pendingRef.current.some(
+      p => !p.error && normalizeReelUrl(p.reelsUrl) === normalized
+    );
+    if (isDuplicatePending) return "Bu reel zaten ekleniyor...";
+
     return null;
   }
 
   function handleAddItem(accountId: number) {
     if (!reportId) return;
-    const url = (newUrls[accountId] ?? "").trim();
-    const error = validateUrl(url);
+    const rawUrl = (newUrls[accountId] ?? "").trim();
+    const error = validateUrl(rawUrl, accountId, items);
     if (error) {
       setUrlErrors(prev => ({ ...prev, [accountId]: error }));
       return;
     }
 
+    const normalized = normalizeReelUrl(rawUrl)!;
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
+
+    // Optimistic: add immediately to UI
+    setPendingItems(prev => [...prev, { tempId, instagramAccountId: accountId, reelsUrl: normalized, saving: true }]);
+    setNewUrls(prev => ({ ...prev, [accountId]: "" }));
+    setUrlErrors(prev => ({ ...prev, [accountId]: "" }));
+
     addItemMutation.mutate({
       data: {
         reportId,
         instagramAccountId: accountId,
-        reelsUrl: url,
+        reelsUrl: normalized,
         contentDate: date,
       }
     }, {
       onSuccess: () => {
-        setNewUrls(prev => ({ ...prev, [accountId]: "" }));
-        setUrlErrors(prev => ({ ...prev, [accountId]: "" }));
+        // Remove pending item — real data comes from invalidate
+        setPendingItems(prev => prev.filter(p => p.tempId !== tempId));
         invalidate();
-        toast({ title: "Reel added" });
       },
       onError: (e: any) => {
-        setUrlErrors(prev => ({ ...prev, [accountId]: e?.message ?? "Failed to add" }));
+        const msg = e?.message ?? "Eklenemedi";
+        setPendingItems(prev => prev.map(p =>
+          p.tempId === tempId ? { ...p, saving: false, error: msg } : p
+        ));
+        // Restore URL in input so user can retry
+        setNewUrls(prev => ({ ...prev, [accountId]: normalized }));
       }
     });
   }
 
+  function handleDeletePending(tempId: string) {
+    setPendingItems(prev => prev.filter(p => p.tempId !== tempId));
+  }
+
   function handleDelete(itemId: number) {
     deleteItemMutation.mutate({ id: itemId }, {
-      onSuccess: () => { invalidate(); toast({ title: "Reel removed" }); },
-      onError: (e: any) => toast({ title: "Error", description: e?.message, variant: "destructive" }),
+      onSuccess: () => { invalidate(); toast({ title: "Reel silindi" }); },
+      onError: (e: any) => toast({ title: "Hata", description: e?.message, variant: "destructive" }),
     });
   }
 
   function handleSubmit() {
     if (!reportId) return;
+    const stillSaving = pendingItems.some(p => p.saving);
+    if (stillSaving) {
+      toast({ title: "Lütfen bekleyin", description: "Reeller kaydediliyor...", variant: "destructive" });
+      return;
+    }
     updateMutation.mutate({ id: reportId, data: { status: "submitted" } }, {
       onSuccess: () => {
-        toast({ title: "Report submitted", description: "Your daily report has been submitted for review." });
+        toast({ title: "Rapor gönderildi", description: "Günlük raporunuz incelemeye alındı." });
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e?.message, variant: "destructive" }),
+      onError: (e: any) => toast({ title: "Hata", description: e?.message, variant: "destructive" }),
     });
   }
 
+  const reportReady = !!reportId && !createReportMutation.isPending;
   const isSubmitted = reportDetail?.status === "submitted" || reportDetail?.status === "approved";
   const items = reportDetail?.items ?? [];
   const itemsByAccount = items.reduce<Record<number, typeof items>>((acc, item) => {
@@ -132,6 +183,9 @@ export default function UserEntry() {
       ) : (
         activeAccounts.map(account => {
           const accountItems = itemsByAccount[account.id] ?? [];
+          const accountPending = pendingItems.filter(p => p.instagramAccountId === account.id);
+          const totalCount = accountItems.length + accountPending.length;
+
           return (
             <Card key={account.id} className="border-card-border">
               <CardHeader className="pb-3">
@@ -140,11 +194,12 @@ export default function UserEntry() {
                   {account.instagramUsername}
                   <Badge variant="outline" className="ml-auto text-xs">
                     <Film className="h-3 w-3 mr-1" />
-                    {accountItems.length} reel{accountItems.length !== 1 ? "s" : ""}
+                    {totalCount} reel{totalCount !== 1 ? "s" : ""}
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Confirmed items */}
                 {accountItems.map(item => (
                   <div key={item.id} className="flex items-center gap-2 rounded-lg bg-muted/40 p-2.5">
                     <Link className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -161,12 +216,33 @@ export default function UserEntry() {
                   </div>
                 ))}
 
+                {/* Optimistic (pending) items */}
+                {accountPending.map(pending => (
+                  <div key={pending.tempId}
+                    className={`flex items-center gap-2 rounded-lg p-2.5 border ${pending.error ? "bg-red-50 border-red-200" : "bg-indigo-50/60 border-indigo-100"}`}>
+                    {pending.saving
+                      ? <Loader2 className="h-3.5 w-3.5 text-indigo-400 shrink-0 animate-spin" />
+                      : <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                    }
+                    <span className={`text-sm truncate flex-1 ${pending.error ? "text-red-600" : "text-indigo-600"}`}>
+                      {pending.reelsUrl}
+                    </span>
+                    {pending.error && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeletePending(pending.tempId)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+
                 {!isSubmitted && (
                   <div className="space-y-1">
                     <div className="flex gap-2">
                       <Input
-                        placeholder="https://www.instagram.com/reel/..."
+                        placeholder={reportReady ? "https://www.instagram.com/reel/..." : "Yükleniyor..."}
                         value={newUrls[account.id] ?? ""}
+                        disabled={!reportReady}
                         onChange={e => {
                           setNewUrls(prev => ({ ...prev, [account.id]: e.target.value }));
                           setUrlErrors(prev => ({ ...prev, [account.id]: "" }));
@@ -174,8 +250,13 @@ export default function UserEntry() {
                         onKeyDown={e => e.key === "Enter" && handleAddItem(account.id)}
                         className={urlErrors[account.id] ? "border-red-400" : ""}
                       />
-                      <Button size="sm" className="gap-1.5 shrink-0" onClick={() => handleAddItem(account.id)} disabled={addItemMutation.isPending}>
-                        <Plus className="h-4 w-4" /> Add
+                      <Button
+                        size="sm"
+                        className="gap-1.5 shrink-0"
+                        onClick={() => handleAddItem(account.id)}
+                        disabled={!reportReady || accountPending.some(p => p.saving)}>
+                        {!reportReady ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                        Add
                       </Button>
                     </div>
                     {urlErrors[account.id] && (
@@ -193,7 +274,7 @@ export default function UserEntry() {
 
       {!isSubmitted && activeAccounts.length > 0 && reportDetail && (
         <div className="flex gap-3 pt-2">
-          <Button className="gap-2" onClick={handleSubmit} disabled={updateMutation.isPending}>
+          <Button className="gap-2" onClick={handleSubmit} disabled={updateMutation.isPending || pendingItems.some(p => p.saving)}>
             <CheckCircle className="h-4 w-4" />
             Submit for Today
           </Button>

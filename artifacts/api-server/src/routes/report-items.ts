@@ -133,9 +133,11 @@ router.delete("/report-items/:id", requireAuth, async (req, res): Promise<void> 
 
   await db.delete(reportItemsTable).where(eq(reportItemsTable.id, id));
 
-  if (report.status === "submitted" || report.status === "approved") {
+  // When a non-admin user deletes an item, reset the report to draft so they
+  // can freely edit and resubmit. Admins can delete without changing status.
+  if (req.user?.role !== "admin" && (report.status === "submitted" || report.status === "late" || report.status === "approved")) {
     await db.update(dailyReportsTable)
-      .set({ status: "submitted", submittedAt: new Date() })
+      .set({ status: "draft" })
       .where(eq(dailyReportsTable.id, item.reportId));
   }
 

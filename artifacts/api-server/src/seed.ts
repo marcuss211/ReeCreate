@@ -3,7 +3,7 @@ import { db, usersTable, instagramAccountsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "./lib/logger";
 
-async function seed() {
+export async function seed() {
   logger.info("Seeding database...");
 
   const adminHash = await bcrypt.hash("admin123", 12);
@@ -33,13 +33,26 @@ async function seed() {
     const [existing] = await db.select().from(usersTable).where(eq(usersTable.username, userData.username));
     if (existing) {
       await db.update(usersTable).set({ passwordHash: userHash }).where(eq(usersTable.username, userData.username));
+      logger.info(`Updated password for ${userData.username}`);
+    } else {
+      await db.insert(usersTable).values({
+        name: userData.name,
+        username: userData.username,
+        passwordHash: userHash,
+        role: "user",
+        status: "active",
+        personnelNo: userData.personnelNo,
+      });
+      logger.info(`Created user ${userData.username}`);
     }
   }
 
-  logger.info("Seed complete. Admin: admin/admin123, Users: */password123");
+  logger.info("Seed complete. Admin: admin/admin123, Users: ahmet,mehmet,ayse/password123");
 }
 
-seed().catch((err) => {
-  logger.error({ err }, "Seed failed");
-  process.exit(1);
-});
+if (process.argv[1] === import.meta.filename || process.argv[1]?.endsWith("seed.mjs")) {
+  seed().catch((err) => {
+    logger.error({ err }, "Seed failed");
+    process.exit(1);
+  });
+}

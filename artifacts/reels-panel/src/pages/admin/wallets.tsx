@@ -2,14 +2,19 @@ import { useListWalletLogs, useListWalletAddresses } from "@workspace/api-client
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WalletStatusBadge } from "@/components/status-badges";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wallet, ArrowRight, Shield } from "lucide-react";
+import { ArrowRight, Shield } from "lucide-react";
 import { format, subDays } from "date-fns";
+import { useMemo } from "react";
 
 export default function AdminWallets() {
-  const yesterday = subDays(new Date(), 1).toISOString();
-  const { data: recentLogs, isLoading: logsLoading } = useListWalletLogs({ since: yesterday });
   const { data: allLogs, isLoading: allLoading } = useListWalletLogs({});
   const { data: wallets, isLoading: walletsLoading } = useListWalletAddresses({});
+
+  const recentLogs = useMemo(() => {
+    const cutoff = subDays(new Date(), 1);
+    return (allLogs ?? []).filter(log => new Date(log.changedAt) >= cutoff);
+  }, [allLogs]);
+  const logsLoading = allLoading;
 
   return (
     <div className="space-y-6">
@@ -22,7 +27,7 @@ export default function AdminWallets() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Shield className="h-4 w-4 text-amber-500" />
-            Changes in Last 24 Hours ({(recentLogs ?? []).length})
+            Changes in Last 24 Hours ({logsLoading ? "..." : (recentLogs ?? []).length})
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">

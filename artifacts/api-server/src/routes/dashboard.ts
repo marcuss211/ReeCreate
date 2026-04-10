@@ -67,6 +67,26 @@ router.get("/dashboard/user-summary", requireAuth, async (req, res): Promise<voi
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   const accounts = await db.select().from(instagramAccountsTable).where(eq(instagramAccountsTable.userId, userId));
 
+  const approvedCountRows = await db
+    .select({
+      instagramAccountId: reportItemsTable.instagramAccountId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(reportItemsTable)
+    .innerJoin(dailyReportsTable, eq(reportItemsTable.reportId, dailyReportsTable.id))
+    .where(and(eq(dailyReportsTable.userId, userId), eq(dailyReportsTable.status, "approved")))
+    .groupBy(reportItemsTable.instagramAccountId);
+
+  const approvedByAccount: Record<number, number> = {};
+  for (const row of approvedCountRows) {
+    approvedByAccount[row.instagramAccountId] = row.count;
+  }
+
+  const accountsWithCount = accounts.map(a => ({
+    ...a,
+    approvedReelsCount: approvedByAccount[a.id] ?? 0,
+  }));
+
   const [todayReport] = await db.select().from(dailyReportsTable)
     .where(and(eq(dailyReportsTable.userId, userId), eq(dailyReportsTable.date, today)));
 
@@ -87,7 +107,7 @@ router.get("/dashboard/user-summary", requireAuth, async (req, res): Promise<voi
   res.json({
     name: user.name,
     personnelNo: user.personnelNo ?? null,
-    instagramAccounts: accounts,
+    instagramAccounts: accountsWithCount,
     todayStatus: todayReport?.status ?? null,
     missingDaysCount: missingReports.length,
     adminNotes,

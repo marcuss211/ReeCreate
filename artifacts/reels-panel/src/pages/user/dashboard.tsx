@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { AtSign, AlertCircle, Wallet, PlusCircle, Hash } from "lucide-react";
+import { AtSign, AlertCircle, Wallet, PlusCircle, Hash, Film } from "lucide-react";
 
 function RaporDurumBadge({ status }: { status: string }) {
   switch (status) {
@@ -109,15 +109,25 @@ export default function UserDashboard() {
             <p className="text-sm text-muted-foreground">Henüz hesap atanmadı</p>
           ) : (
             <div className="space-y-2">
-              {data?.instagramAccounts.map(a => (
-                <div key={a.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
-                  <AtSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{a.instagramUsername}</span>
-                  <Badge variant={a.status === "active" ? "default" : "secondary"} className={`ml-auto text-xs ${a.status === "active" ? "bg-green-100 text-green-800" : ""}`}>
-                    {a.status === "active" ? "Aktif" : "Pasif"}
-                  </Badge>
-                </div>
-              ))}
+              {data?.instagramAccounts.map(a => {
+                const approvedCount = (a as any).approvedReelsCount ?? 0;
+                return (
+                  <div key={a.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                    <AtSign className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium">{a.instagramUsername}</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Film className="h-3.5 w-3.5 text-green-600" />
+                        <span className="font-semibold text-green-700">{approvedCount}</span>
+                        <span>onaylı reel</span>
+                      </span>
+                      <Badge variant={a.status === "active" ? "default" : "secondary"} className={`text-xs ${a.status === "active" ? "bg-green-100 text-green-800" : ""}`}>
+                        {a.status === "active" ? "Aktif" : "Pasif"}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

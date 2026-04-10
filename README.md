@@ -17,6 +17,8 @@ Dahili operasyon ekipleri için tasarlanmış, kullanıcıların günlük Instag
 - [API Referansı](#api-referansı)
 - [Frontend Sayfaları](#frontend-sayfaları)
 - [Test Hesapları](#test-hesapları)
+- [2FA (İki Faktörlü Doğrulama)](#2fa-i̇ki-faktörlü-doğrulama)
+- [Güvenlik](#güvenlik)
 - [Kod Üretimi (Codegen)](#kod-üretimi-codegen)
 - [Dağıtım](#dağıtım)
 
@@ -39,10 +41,12 @@ Bu uygulama iki rol üzerine kuruludur:
 - Günlük Reels link girişi (tarih bazlı, onaydan sonra da yeni link eklenebilir)
 - Her link için eklenme tarihi ve saati gösterimi
 - Rapor durumu takibi: Taslak → Onay Bekliyor → Onaylandı / Reddedildi
+- Reel silme (admin onayı gerekmez, raporu taslağa döndürür)
 - Geçmiş rapor görüntüleme
 - USDT TRC20 cüzdan adresi ekleme ve değiştirme
 
 ### Admin Tarafı
+- **Zorunlu Google Authenticator (TOTP) 2FA** — admin hesaplarında bypass edilemez
 - Günlük rapor onaylama / reddetme / eksik işaretleme
 - Kullanıcı ve Instagram hesabı CRUD işlemleri
 - Gecikme ve toplu giriş tespiti
@@ -67,7 +71,9 @@ Bu uygulama iki rol üzerine kuruludur:
 | **Frontend** | React 19, Vite 7, TailwindCSS 4, shadcn/ui |
 | **State / Veri** | TanStack Query v5 |
 | **Grafikler** | Recharts |
-| **Kimlik Doğrulama** | JWT (Bearer token, localStorage) |
+| **Kimlik Doğrulama** | JWT — HttpOnly cookie (localStorage kullanılmaz) |
+| **2FA** | speakeasy (TOTP) + qrcode |
+| **Güvenlik** | Helmet, CORS kısıtlama, rate limiting, brute-force koruması |
 
 ---
 
@@ -77,19 +83,18 @@ Bu uygulama iki rol üzerine kuruludur:
 .
 ├── artifacts/
 │   ├── api-server/          # Express API backend (port 8080)
-│   │   ├── src/
-│   │   │   ├── routes/      # Tüm API route'ları
-│   │   │   ├── middlewares/ # Auth middleware
-│   │   │   ├── lib/         # Audit log yardımcısı
-│   │   │   └── index.ts     # Sunucu giriş noktası
-│   │   └── build.mjs        # esbuild yapılandırması
+│   │   └── src/
+│   │       ├── routes/      # Tüm API route'ları (auth, 2fa, users, …)
+│   │       ├── middlewares/ # auth.ts, preauth.ts, rate-limit.ts
+│   │       ├── lib/         # Audit log, logger
+│   │       └── index.ts     # Sunucu giriş noktası
 │   └── reels-panel/         # React frontend
 │       └── src/
 │           ├── pages/
-│           │   ├── admin/   # Admin sayfaları
-│           │   └── user/    # Kullanıcı sayfaları
+│           │   ├── admin/   # Dashboard, review, users, accounts, audit, 2fa-setup, 2fa-verify
+│           │   └── user/    # Dashboard, entry, history, cekim
 │           ├── components/  # Ortak UI bileşenleri
-│           └── hooks/       # React hook'ları
+│           └── hooks/       # use-auth.tsx vb.
 ├── lib/
 │   ├── db/                  # Drizzle ORM şeması + veritabanı istemcisi
 │   ├── api-spec/            # OpenAPI spesifikasyonu + Orval yapılandırması
@@ -111,7 +116,11 @@ users
 ├── id, name, username, password_hash
 ├── role: "admin" | "user"
 ├── status: "active" | "inactive"
-└── personnel_no (300–2000 arası, benzersiz)
+├── personnel_no (300–2000 arası, benzersiz)
+├── two_factor_enabled (boolean, default false)
+├── two_factor_secret (text, nullable — TOTP secret)
+├── two_factor_setup_completed_at (timestamp)
+└── two_factor_last_verified_at (timestamp)
 
 instagram_accounts
 ├── id, user_id (FK → users)
@@ -166,8 +175,6 @@ pnpm install
 
 ### 3. Ortam Değişkenlerini Ayarla
 
-Proje kökünde `.env` dosyası oluştur (bkz. [Ortam Değişkenleri](#ortam-değişkenleri)):
-
 ```bash
 cp .env.example .env
 # .env dosyasını kendi değerlerinle düzenle
@@ -209,7 +216,7 @@ API sunucusu `http://localhost:8080` adresinde çalışır.
 ```bash
 pnpm --filter @workspace/reels-panel run dev
 ```
-Frontend `http://localhost:5173` (veya `$PORT`) adresinde çalışır.
+Frontend `http://localhost:5173` adresinde çalışır.
 
 ---
 
@@ -218,24 +225,28 @@ Frontend `http://localhost:5173` (veya `$PORT`) adresinde çalışır.
 ### API Sunucusu (`artifacts/api-server/.env`)
 
 ```env
-# Zorunlu
+# Zorunlu — minimum 32 karakter, güçlü rastgele bir değer
 DATABASE_URL=postgresql://kullanici:sifre@localhost:5432/reels_panel
-JWT_SECRET=gizli-jwt-anahtari-buraya-yaz
+SESSION_SECRET=en-az-32-karakter-uzunlugunda-gizli-bir-deger
 
 # İsteğe Bağlı
 PORT=8080
 NODE_ENV=development
+
+# Üretimde belirli bir origin kısıtlamak istersen (opsiyonel)
+# Ayarlanmazsa *.replit.app, *.repl.co, *.replit.dev otomatik güvenilir sayılır
+CORS_ORIGIN=https://sizin-domain.com
 ```
 
 ### Frontend (`artifacts/reels-panel/.env`)
 
 ```env
-# API sunucusunun adresi
+# Geliştirme ortamında API'nin tam adresi
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
-> **Not:** `DATABASE_URL` bağlantı dizesi standart PostgreSQL formatındadır.  
-> Örnek: `postgresql://postgres:password@localhost:5432/mydb`
+> **Kritik:** `SESSION_SECRET` eksikse sunucu başlamaz. En az 32 karakter, tahmin edilemez bir değer kullanın.  
+> Üretimde `openssl rand -hex 32` komutuyla güvenli bir değer üretebilirsiniz.
 
 ---
 
@@ -256,7 +267,7 @@ pnpm --filter @workspace/api-server run build
 ### Veritabanı Şeması Değişikliklerini Uygula
 
 ```bash
-# Geliştirme ortamında (force push)
+# Geliştirme ortamında (onay ister)
 pnpm --filter @workspace/db run push
 
 # Force (onay istemeden)
@@ -267,15 +278,23 @@ pnpm --filter @workspace/db run push-force
 
 ## API Referansı
 
-Tüm endpoint'ler `/api` prefix'i ile başlar. JWT token'ı `Authorization: Bearer <token>` header'ı ile gönderilir.
+Tüm endpoint'ler `/api` prefix'i ile başlar. Kimlik doğrulama **HttpOnly cookie** üzerinden yapılır (`auth_token`). `Authorization: Bearer` header'ı geriye dönük uyumluluk için de kabul edilir.
 
 ### Kimlik Doğrulama
 
 | Method | Endpoint | Açıklama |
 |--------|----------|----------|
-| `POST` | `/api/auth/login` | Giriş yap, JWT döner |
-| `POST` | `/api/auth/logout` | Çıkış yap |
+| `POST` | `/api/auth/login` | Giriş yap. Normal kullanıcı: `auth_token` cookie set edilir. Admin: `pre_auth_token` set edilir, 2FA gerektirir. |
+| `POST` | `/api/auth/logout` | Çıkış yap, cookie temizlenir |
 | `GET` | `/api/auth/me` | Mevcut kullanıcı bilgileri |
+
+### Admin 2FA (Google Authenticator)
+
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| `POST` | `/api/auth/2fa/setup` | QR kodu ve manuel key üret (pre_auth_token gerekir) |
+| `POST` | `/api/auth/2fa/verify-setup` | İlk kurulum kodunu doğrula, 2FA'yı aktif et, tam oturum ver |
+| `POST` | `/api/auth/2fa/verify` | Giriş akışında TOTP kodunu doğrula, tam oturum ver |
 
 ### Günlük Raporlar
 
@@ -284,23 +303,21 @@ Tüm endpoint'ler `/api` prefix'i ile başlar. JWT token'ı `Authorization: Bear
 | `GET` | `/api/daily-reports` | Raporları listele (tarih, kullanıcı, durum filtresi) |
 | `POST` | `/api/daily-reports` | Rapor oluştur veya mevcut olanı döndür (idempotent) |
 | `GET` | `/api/daily-reports/:id` | Rapor detayı (item'larla birlikte) |
-| `PATCH` | `/api/daily-reports/:id` | Durum güncelle (submitted/approved/rejected/missing) |
+| `PATCH` | `/api/daily-reports/:id` | Durum güncelle |
 
 ### Reel Kalemleri
 
 | Method | Endpoint | Açıklama |
 |--------|----------|----------|
 | `POST` | `/api/report-items` | Rapora reel linki ekle |
-| `DELETE` | `/api/report-items/:id` | Reel linkini sil |
-
-> **Not:** Onaylı veya gönderilmiş raporlara yeni link eklenebilir. Ekleme işlemi raporu otomatik olarak tekrar "submitted" durumuna alır.
+| `DELETE` | `/api/report-items/:id` | Reel linkini sil (admin onayı gerekmez; raporu taslağa döndürür) |
 
 ### Dashboard
 
 | Method | Endpoint | Rol | Açıklama |
 |--------|----------|-----|----------|
 | `GET` | `/api/dashboard/summary` | Admin | Genel istatistikler |
-| `GET` | `/api/dashboard/user-summary` | Kullanıcı | Kişisel özet (hesaplar, onaylı reel sayısı, bugünkü durum) |
+| `GET` | `/api/dashboard/user-summary` | Kullanıcı | Kişisel özet |
 | `GET` | `/api/dashboard/daily-activity` | Admin | 14 günlük aktivite verisi |
 
 ### Kullanıcılar ve Hesaplar
@@ -323,7 +340,6 @@ Tüm endpoint'ler `/api` prefix'i ile başlar. JWT token'ı `Authorization: Bear
 | `GET` | `/api/delay-flags` | Gecikme bayrakları |
 | `GET` | `/api/delay-flags/behavior-summary` | Kullanıcı bazlı davranış özeti |
 | `GET/POST/PATCH` | `/api/wallet-addresses` | Cüzdan adresi yönetimi |
-| `GET` | `/api/health` | Sağlık kontrolü |
 
 ---
 
@@ -341,12 +357,14 @@ Tüm endpoint'ler `/api` prefix'i ile başlar. JWT token'ı `Authorization: Bear
 | Cüzdanlar | `/admin/wallets` | USDT TRC20 cüzdan değişiklik izleme |
 | Denetim Logu | `/admin/audit` | Tüm sistem aksiyonları |
 | Dışa Aktar | `/admin/export` | CSV / Excel olarak rapor indir |
+| 2FA Kurulum | `/admin/2fa-setup` | İlk girişte zorunlu Google Authenticator kurulumu |
+| 2FA Doğrulama | `/admin/2fa-verify` | Sonraki girişlerde TOTP kodu doğrulama |
 
 ### Kullanıcı
 
 | Sayfa | Yol | Açıklama |
 |-------|-----|----------|
-| Ana Sayfa | `/dashboard` | Bugünkü durum, eksik günler, atanan hesaplar (onaylı reel sayısıyla) |
+| Ana Sayfa | `/dashboard` | Bugünkü durum, eksik günler, atanan hesaplar |
 | Günlük Giriş | `/entry` | Tarih seçip Reels linki ekleme / silme |
 | Geçmiş | `/history` | Geçmiş raporlar ve admin notları |
 | Çekim | `/cekim` | USDT TRC20 cüzdan adresi yönetimi |
@@ -359,10 +377,64 @@ Seed komutu çalıştırıldıktan sonra:
 
 | Kullanıcı Adı | Şifre | Rol | Notlar |
 |---------------|-------|-----|--------|
-| `admin` | `admin123` | Admin | Tüm admin yetkilerine sahip |
+| `admin` | `admin123` | Admin | 2FA kurulumu ilk girişte zorunlu |
 | `ahmet` | `password123` | Kullanıcı | 2 Instagram hesabı atanmış |
 | `mehmet` | `password123` | Kullanıcı | — |
 | `ayse` | `password123` | Kullanıcı | — |
+
+> **Önemli:** Üretim ortamında `admin123` şifresini admin panelinden mutlaka değiştirin.
+
+---
+
+## 2FA (İki Faktörlü Doğrulama)
+
+Admin hesapları için **Google Authenticator (TOTP)** zorunludur. 2FA olmadan admin paneline erişilemez.
+
+### İlk Giriş Akışı (Kurulum)
+
+```
+1. admin / <şifre> ile giriş yap
+2. Sistem → 2FA Kurulum sayfasına yönlendirir
+3. Google Authenticator'da "+" → "QR kodu tara"
+4. 6 haneli kodu gir → 2FA aktif edilir
+5. Admin paneline yönlendirilirsin
+```
+
+### Sonraki Girişler
+
+```
+1. admin / <şifre> ile giriş yap
+2. Sistem → 2FA Doğrulama sayfasına yönlendirir
+3. Google Authenticator'dan 6 haneli kodu gir
+4. Admin paneline yönlendirilirsin
+```
+
+### Güvenlik Detayları
+
+| Özellik | Detay |
+|---------|-------|
+| Pre-auth token süresi | 5 dakika (şifre doğrulandıktan sonra) |
+| 2FA deneme limiti | 5 yanlış deneme → 15 dakika blok |
+| TOTP penceresi | ±30 saniye tolerans (window: 1) |
+| Audit log | `2fa_setup_started`, `2fa_setup_completed`, `2fa_verify_success`, `2fa_verify_failed` |
+
+---
+
+## Güvenlik
+
+| Özellik | Detay |
+|---------|-------|
+| **Kimlik doğrulama** | HttpOnly + Secure cookie, localStorage kullanılmaz |
+| **Admin 2FA** | Google Authenticator (TOTP), zorunlu ve bypass edilemez |
+| **Session secret** | Minimum 32 karakter, eksikse sunucu başlamaz |
+| **Brute-force koruması** | 10 başarısız giriş → 15 dakika hesap kilidi |
+| **Rate limiting** | Login: 10/dk, Wallet: 5/saat, 2FA: 5/15dk, Global (prod): 200/dk |
+| **HTTP güvenlik başlıkları** | Helmet.js (CSP, HSTS vb.) |
+| **CORS** | Yalnızca güvenilir origin'ler (*.replit.app veya CORS_ORIGIN env) |
+| **Body limit** | 100kb |
+| **Timing attack koruması** | Hayali bcrypt hash'i (kullanıcı varlığı tespitine karşı) |
+| **URL doğrulama** | Instagram dışı URL'ler ve kısaltıcılar reddedilir |
+| **Audit log** | Tüm kritik aksiyonlar `audit_logs` tablosuna yazılır |
 
 ---
 
@@ -388,9 +460,10 @@ cd lib/api-client-react && pnpm exec tsc -p tsconfig.json
 
 | Alan | Kural |
 |------|-------|
-| **Reels URL** | `instagram.com/reel/{id}/` formatına normalize edilir |
+| **Reels URL** | `instagram.com/reel/{id}/` formatına normalize edilir; kısaltıcılar reddedilir |
 | **TRC20 Cüzdan** | `/^T[1-9A-HJ-NP-Za-km-z]{33}$/` regex kontrolü |
 | **Personel No** | 300–2000 arası tam sayı, benzersiz |
+| **Şifre** | Minimum 8 karakter |
 | **Gecikme Bayrağı** | Rapor tarihinden 2 günden fazla geçmişse `late` durumu |
 | **Toplu Giriş Bayrağı** | 5 günden fazla gecikme tespit edilirse `bulk_flagged` |
 
@@ -413,7 +486,7 @@ pnpm --filter @workspace/reels-panel run build
 ```env
 NODE_ENV=production
 DATABASE_URL=postgresql://...
-JWT_SECRET=guclu-rastgele-bir-deger
+SESSION_SECRET=openssl-rand-hex-32-ile-uretilmis-deger
 PORT=8080
 ```
 
@@ -426,16 +499,6 @@ node --enable-source-maps artifacts/api-server/dist/index.mjs
 # Frontend (statik dosyalar)
 # dist/ klasörünü Nginx veya herhangi bir statik sunucu ile servis edin
 ```
-
----
-
-## Güvenlik Notları
-
-- JWT secret'ı güçlü ve rastgele bir değer olarak ayarlayın (min. 32 karakter önerilir)
-- Üretimde `admin123` varsayılan şifresini mutlaka değiştirin
-- `pnpm-workspace.yaml` içindeki `minimumReleaseAge: 1440` ayarı tedarik zinciri saldırılarına karşı koruma sağlar — devre dışı bırakmayın
-- Tüm durum geçişleri `audit_logs` tablosuna kaydedilir
-- Cüzdan adresi değişiklikleri `wallet_address_logs` tablosunda tarihçesiyle saklanır
 
 ---
 

@@ -9,6 +9,8 @@ import { globalRateLimit } from "./middlewares/rate-limit";
 
 const app: Express = express();
 
+app.set("trust proxy", 1);
+
 const allowedOrigin = process.env.CORS_ORIGIN;
 const isProduction = process.env.NODE_ENV === "production";
 

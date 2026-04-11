@@ -19,14 +19,14 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const adminNav = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { name: "Review", href: "/admin/review", icon: CheckSquare },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Accounts", href: "/admin/accounts", icon: Instagram },
+  { name: "İnceleme", href: "/admin/review", icon: CheckSquare },
+  { name: "Kullanıcılar", href: "/admin/users", icon: Users },
+  { name: "Hesaplar", href: "/admin/accounts", icon: Instagram },
   { name: "Ödeme Takip", href: "/admin/odeme-takip", icon: CreditCard },
-  { name: "Monitoring", href: "/admin/monitoring", icon: ActivitySquare },
-  { name: "Wallets", href: "/admin/wallets", icon: Wallet },
-  { name: "Audit Logs", href: "/admin/audit", icon: History },
-  { name: "Export", href: "/admin/export", icon: Download },
+  { name: "İzleme", href: "/admin/monitoring", icon: ActivitySquare },
+  { name: "Cüzdanlar", href: "/admin/wallets", icon: Wallet },
+  { name: "Denetim Logu", href: "/admin/audit", icon: History },
+  { name: "Dışa Aktar", href: "/admin/export", icon: Download },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {
@@ -41,7 +41,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-14 items-center border-b border-sidebar-border px-4 font-semibold">
         <Instagram className="mr-2 h-5 w-5 text-sidebar-primary" />
-        <span>Reels Control Panel</span>
+        <span>Reels Kontrol Paneli</span>
       </div>
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="grid gap-1 px-2">
@@ -68,7 +68,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </div>
         <Button variant="ghost" className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={logout}>
           <LogOut className="h-4 w-4" />
-          Logout
+          Çıkış Yap
         </Button>
       </div>
     </div>
@@ -76,19 +76,17 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-[100dvh] w-full bg-background">
-      {/* Desktop Sidebar */}
       <aside className="hidden w-64 border-r border-sidebar-border md:block">
         <SidebarContent />
       </aside>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile Header */}
         <header className="flex h-14 items-center gap-4 border-b border-border bg-card px-4 md:hidden">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
+                <span className="sr-only">Menüyü Aç</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
@@ -97,7 +95,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </Sheet>
           <div className="font-semibold flex items-center">
             <Instagram className="mr-2 h-5 w-5 text-primary" />
-            Reels Panel
+            Reels Paneli
           </div>
         </header>
 

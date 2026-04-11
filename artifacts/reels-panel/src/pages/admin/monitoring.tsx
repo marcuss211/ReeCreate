@@ -15,8 +15,8 @@ export default function AdminMonitoring() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Delay & Bulk Monitoring</h1>
-        <p className="text-sm text-muted-foreground">Track user submission behavior patterns</p>
+        <h1 className="text-2xl font-bold tracking-tight">Gecikme & Toplu Giriş İzleme</h1>
+        <p className="text-sm text-muted-foreground">Kullanıcı gönderim davranışlarını takip et</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -24,7 +24,7 @@ export default function AdminMonitoring() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Needs Attention</p>
+                <p className="text-sm text-muted-foreground">Dikkat Gerekiyor</p>
                 <p className="text-3xl font-bold mt-1">{needsAttention.length}</p>
               </div>
               <div className="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center">
@@ -37,7 +37,7 @@ export default function AdminMonitoring() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Bulk Entry Suspected</p>
+                <p className="text-sm text-muted-foreground">Toplu Giriş Şüphesi</p>
                 <p className="text-3xl font-bold mt-1">{bulkUsers.length}</p>
               </div>
               <div className="h-12 w-12 rounded-xl bg-purple-100 flex items-center justify-center">
@@ -50,7 +50,7 @@ export default function AdminMonitoring() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">2+ Day Delays</p>
+                <p className="text-sm text-muted-foreground">2+ Gün Gecikme</p>
                 <p className="text-3xl font-bold mt-1">{delayedUsers.length}</p>
               </div>
               <div className="h-12 w-12 rounded-xl bg-orange-100 flex items-center justify-center">
@@ -63,20 +63,20 @@ export default function AdminMonitoring() {
 
       <Card className="border-card-border">
         <CardHeader>
-          <CardTitle className="text-base">User Behavior Summary</CardTitle>
+          <CardTitle className="text-base">Kullanıcı Davranış Özeti</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Personnel #</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Behavior</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Delay Flags</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Max Delay</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Bulk Flags</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Repeat Issues</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Kullanıcı</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Personel No</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Davranış</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Gecikme Bayrağı</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Maks. Gecikme</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Toplu Giriş</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tekrarlayan Sorun</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,7 +90,7 @@ export default function AdminMonitoring() {
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-muted-foreground">
                       <TrendingDown className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                      No data available
+                      Veri bulunamadı
                     </td>
                   </tr>
                 ) : (
@@ -110,7 +110,7 @@ export default function AdminMonitoring() {
                         <td className="px-4 py-3 text-center">
                           {s.maxDelayDays > 0 ? (
                             <span className={`font-medium ${s.maxDelayDays >= 2 ? "text-orange-600" : "text-yellow-600"}`}>
-                              {s.maxDelayDays}d
+                              {s.maxDelayDays}g
                             </span>
                           ) : "—"}
                         </td>

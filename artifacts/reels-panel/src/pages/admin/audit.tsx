@@ -19,25 +19,42 @@ const ACTION_COLORS: Record<string, string> = {
   update_wallet_address: "bg-red-100 text-red-800",
 };
 
+const ACTION_LABELS: Record<string, string> = {
+  login: "Giriş",
+  logout: "Çıkış",
+  create_user: "Kullanıcı Oluşturuldu",
+  update_user: "Kullanıcı Güncellendi",
+  reset_password: "Şifre Sıfırlandı",
+  create_instagram_account: "Hesap Oluşturuldu",
+  update_instagram_account: "Hesap Güncellendi",
+  update_daily_report: "Rapor Güncellendi",
+  update_wallet_address: "Cüzdan Güncellendi",
+  "2fa_setup_started": "2FA Kurulum Başladı",
+  "2fa_setup_completed": "2FA Kurulum Tamamlandı",
+  "2fa_verify_success": "2FA Doğrulama Başarılı",
+  "2fa_verify_failed": "2FA Doğrulama Başarısız",
+};
+
 export default function AdminAudit() {
   const [search, setSearch] = useState("");
   const { data: logs, isLoading } = useListAuditLogs({ limit: 200 });
 
   const filtered = (logs ?? []).filter(l =>
     (l.userName ?? "").toLowerCase().includes(search.toLowerCase()) ||
-    l.actionType.toLowerCase().includes(search.toLowerCase())
+    l.actionType.toLowerCase().includes(search.toLowerCase()) ||
+    (ACTION_LABELS[l.actionType] ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Audit Logs</h1>
-        <p className="text-sm text-muted-foreground">All system actions tracked for security</p>
+        <h1 className="text-2xl font-bold tracking-tight">Denetim Logu</h1>
+        <p className="text-sm text-muted-foreground">Güvenlik için tüm sistem aksiyonları izleniyor</p>
       </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Search by user or action..." value={search} onChange={e => setSearch(e.target.value)} />
+        <Input className="pl-9" placeholder="Kullanıcı veya aksiyon ara..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       <Card className="border-card-border">
@@ -46,10 +63,10 @@ export default function AdminAudit() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Time</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Action</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Target</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Zaman</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Kullanıcı</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Aksiyon</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Hedef</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">IP</th>
                 </tr>
               </thead>
@@ -64,19 +81,19 @@ export default function AdminAudit() {
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-muted-foreground">
                       <History className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                      No audit logs found
+                      Denetim logu bulunamadı
                     </td>
                   </tr>
                 ) : (
                   filtered.map(l => (
                     <tr key={l.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(l.createdAt), "MMM dd, HH:mm:ss")}
+                        {format(new Date(l.createdAt), "dd MMM, HH:mm:ss")}
                       </td>
-                      <td className="px-4 py-3 font-medium">{l.userName ?? `User #${l.userId}`}</td>
+                      <td className="px-4 py-3 font-medium">{l.userName ?? `Kullanıcı #${l.userId}`}</td>
                       <td className="px-4 py-3">
                         <Badge className={`text-xs ${ACTION_COLORS[l.actionType] ?? "bg-gray-100 text-gray-700"}`}>
-                          {l.actionType.replace(/_/g, " ")}
+                          {ACTION_LABELS[l.actionType] ?? l.actionType.replace(/_/g, " ")}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">

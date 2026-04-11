@@ -13,7 +13,7 @@ export default function AdminExport() {
     const url = `/api/export/daily-report?date=${date}&format=${fmt}`;
     const a = document.createElement("a");
     a.href = url;
-    a.download = `daily-report-${date}.${fmt}`;
+    a.download = `gunluk-rapor-${date}.${fmt}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -22,31 +22,31 @@ export default function AdminExport() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Export Reports</h1>
-        <p className="text-sm text-muted-foreground">Download daily reels reports in CSV or Excel format</p>
+        <h1 className="text-2xl font-bold tracking-tight">Raporları Dışa Aktar</h1>
+        <p className="text-sm text-muted-foreground">Günlük reel raporlarını CSV veya Excel formatında indir</p>
       </div>
 
       <Card className="border-card-border max-w-lg">
         <CardHeader>
-          <CardTitle className="text-base">Daily Report Export</CardTitle>
+          <CardTitle className="text-base">Günlük Rapor Dışa Aktarma</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Report Date</Label>
+            <Label>Rapor Tarihi</Label>
             <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full" />
           </div>
           <div className="flex gap-3">
             <Button className="flex-1 gap-2" variant="outline" onClick={() => handleExport("csv")}>
               <FileText className="h-4 w-4" />
-              Export CSV
+              CSV İndir
             </Button>
             <Button className="flex-1 gap-2" onClick={() => handleExport("xlsx")}>
               <Table className="h-4 w-4" />
-              Export Excel
+              Excel İndir
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Exports include: date, user name, personnel number, report status, admin notes, Instagram accounts, reels URLs, content dates, and entry times.
+            Dışa aktarma şunları içerir: tarih, kullanıcı adı, personel numarası, rapor durumu, admin notları, Instagram hesapları, reel URL'leri, içerik tarihleri ve giriş zamanları.
           </p>
         </CardContent>
       </Card>

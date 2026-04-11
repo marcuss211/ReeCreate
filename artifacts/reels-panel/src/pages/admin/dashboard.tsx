@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, UserCheck, CheckCircle2, AlertCircle, Film, Clock, XCircle, Timer, Flag, Wallet } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { format, parseISO } from "date-fns";
+import { tr } from "date-fns/locale";
 
 interface StatCardProps {
   title: string;
@@ -40,38 +41,38 @@ export default function AdminDashboard() {
   const { data: activity, isLoading: activityLoading } = useGetDailyActivity({ days: 14 });
 
   const chartData = activity?.map(d => ({
-    date: format(parseISO(d.date), "MMM dd"),
-    Submitted: d.submitted,
-    Missing: d.missing,
-    Reels: d.reelsCount,
+    tarih: format(parseISO(d.date), "d MMM", { locale: tr }),
+    "Gönderildi": d.submitted,
+    "Eksik": d.missing,
+    "Reel": d.reelsCount,
   })) ?? [];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Overview of today's activity</p>
+        <p className="text-sm text-muted-foreground">Bugünkü aktiviteye genel bakış</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <StatCard title="Total Users" value={summary?.totalUsers} icon={<Users className="h-5 w-5 text-white" />} colorClass="bg-primary" isLoading={summaryLoading} />
-        <StatCard title="Active Users" value={summary?.activeUsers} icon={<UserCheck className="h-5 w-5 text-white" />} colorClass="bg-emerald-500" isLoading={summaryLoading} />
-        <StatCard title="Submitted Today" value={summary?.todaySubmittedCount} icon={<CheckCircle2 className="h-5 w-5 text-white" />} colorClass="bg-blue-500" isLoading={summaryLoading} />
-        <StatCard title="Missing Today" value={summary?.todayMissingCount} icon={<AlertCircle className="h-5 w-5 text-white" />} colorClass="bg-amber-500" isLoading={summaryLoading} />
-        <StatCard title="Reels Today" value={summary?.totalReelsTodayCount} icon={<Film className="h-5 w-5 text-white" />} colorClass="bg-violet-500" isLoading={summaryLoading} />
+        <StatCard title="Toplam Kullanıcı" value={summary?.totalUsers} icon={<Users className="h-5 w-5 text-white" />} colorClass="bg-primary" isLoading={summaryLoading} />
+        <StatCard title="Aktif Kullanıcı" value={summary?.activeUsers} icon={<UserCheck className="h-5 w-5 text-white" />} colorClass="bg-emerald-500" isLoading={summaryLoading} />
+        <StatCard title="Bugün Gönderilen" value={summary?.todaySubmittedCount} icon={<CheckCircle2 className="h-5 w-5 text-white" />} colorClass="bg-blue-500" isLoading={summaryLoading} />
+        <StatCard title="Bugün Eksik" value={summary?.todayMissingCount} icon={<AlertCircle className="h-5 w-5 text-white" />} colorClass="bg-amber-500" isLoading={summaryLoading} />
+        <StatCard title="Bugün Reel" value={summary?.totalReelsTodayCount} icon={<Film className="h-5 w-5 text-white" />} colorClass="bg-violet-500" isLoading={summaryLoading} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard title="Pending Approvals" value={summary?.pendingApprovals} icon={<Clock className="h-5 w-5 text-white" />} colorClass="bg-orange-500" isLoading={summaryLoading} />
-        <StatCard title="Rejected" value={summary?.rejectedItems} icon={<XCircle className="h-5 w-5 text-white" />} colorClass="bg-red-500" isLoading={summaryLoading} />
-        <StatCard title="Delayed Users" value={summary?.delayedUsers} icon={<Timer className="h-5 w-5 text-white" />} colorClass="bg-yellow-500" isLoading={summaryLoading} />
-        <StatCard title="Bulk Flagged" value={summary?.bulkFlaggedUsers} icon={<Flag className="h-5 w-5 text-white" />} colorClass="bg-red-600" isLoading={summaryLoading} />
-        <StatCard title="Wallet Changes 24h" value={summary?.walletChanges24h} icon={<Wallet className="h-5 w-5 text-white" />} colorClass="bg-slate-500" isLoading={summaryLoading} />
+        <StatCard title="Onay Bekleyen" value={summary?.pendingApprovals} icon={<Clock className="h-5 w-5 text-white" />} colorClass="bg-orange-500" isLoading={summaryLoading} />
+        <StatCard title="Reddedilen" value={summary?.rejectedItems} icon={<XCircle className="h-5 w-5 text-white" />} colorClass="bg-red-500" isLoading={summaryLoading} />
+        <StatCard title="Gecikmeli Kullanıcı" value={summary?.delayedUsers} icon={<Timer className="h-5 w-5 text-white" />} colorClass="bg-yellow-500" isLoading={summaryLoading} />
+        <StatCard title="Toplu Giriş Şüphesi" value={summary?.bulkFlaggedUsers} icon={<Flag className="h-5 w-5 text-white" />} colorClass="bg-red-600" isLoading={summaryLoading} />
+        <StatCard title="Cüzdan Değişimi (24s)" value={summary?.walletChanges24h} icon={<Wallet className="h-5 w-5 text-white" />} colorClass="bg-slate-500" isLoading={summaryLoading} />
       </div>
 
       <Card className="border-card-border">
         <CardHeader>
-          <CardTitle className="text-base font-semibold">14-Day Submission Activity</CardTitle>
+          <CardTitle className="text-base font-semibold">14 Günlük Gönderim Aktivitesi</CardTitle>
         </CardHeader>
         <CardContent>
           {activityLoading ? (
@@ -80,7 +81,7 @@ export default function AdminDashboard() {
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                <XAxis dataKey="tarih" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip
                   contentStyle={{
@@ -91,9 +92,9 @@ export default function AdminDashboard() {
                   }}
                 />
                 <Legend />
-                <Bar dataKey="Submitted" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Missing" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Reels" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Gönderildi" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Eksik" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Reel" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

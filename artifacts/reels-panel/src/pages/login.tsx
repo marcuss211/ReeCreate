@@ -18,8 +18,8 @@ import { Instagram, Loader2 } from "lucide-react";
 import { Redirect, useLocation } from "wouter";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  username: z.string().min(1, "Kullanıcı adı zorunludur"),
+  password: z.string().min(1, "Şifre zorunludur"),
 });
 
 export default function Login() {

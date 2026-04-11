@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { useListDailyReports, useGetDailyReport, useUpdateDailyReport, getListDailyReportsQueryKey, getGetDailyReportQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ReportStatusBadge } from "@/components/status-badges";
@@ -35,13 +33,19 @@ export default function AdminReview() {
     }
   }
 
+  const statusLabels: Record<string, string> = {
+    approved: "onaylandı",
+    missing: "eksik olarak işaretlendi",
+    rejected: "reddedildi",
+  };
+
   function updateStatus(id: number, status: string, note?: string) {
     updateMutation.mutate({ id, data: { status, adminNote: note ?? null } }, {
       onSuccess: () => {
-        toast({ title: `Report marked as ${status}` });
+        toast({ title: `Rapor ${statusLabels[status] ?? status}` });
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e?.message, variant: "destructive" }),
+      onError: (e: any) => toast({ title: "Hata", description: e?.message, variant: "destructive" }),
     });
   }
 
@@ -56,8 +60,8 @@ export default function AdminReview() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Daily Review</h1>
-          <p className="text-sm text-muted-foreground">Review and approve daily submissions</p>
+          <h1 className="text-2xl font-bold tracking-tight">Günlük İnceleme</h1>
+          <p className="text-sm text-muted-foreground">Günlük gönderimleri incele ve onayla</p>
         </div>
         <Input
           type="date"
@@ -74,7 +78,7 @@ export default function AdminReview() {
       ) : (reports ?? []).length === 0 ? (
         <Card className="border-card-border">
           <CardContent className="py-12 text-center text-muted-foreground">
-            No reports for {date}
+            {date} tarihinde rapor bulunamadı
           </CardContent>
         </Card>
       ) : (
@@ -85,9 +89,9 @@ export default function AdminReview() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
-                    <CardTitle className="text-base">{firstReport.userName ?? `User #${firstReport.userId}`}</CardTitle>
+                    <CardTitle className="text-base">{firstReport.userName ?? `Kullanıcı #${firstReport.userId}`}</CardTitle>
                     {firstReport.userPersonnelNo && (
-                      <p className="text-sm text-muted-foreground">Personnel #{firstReport.userPersonnelNo}</p>
+                      <p className="text-sm text-muted-foreground">Personel #{firstReport.userPersonnelNo}</p>
                     )}
                   </div>
                 </div>
@@ -99,29 +103,29 @@ export default function AdminReview() {
                       <ReportStatusBadge status={report.status} />
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Film className="h-3.5 w-3.5" />
-                        <span>{report.itemCount} reels</span>
+                        <span>{report.itemCount} reel</span>
                       </div>
                       {report.adminNote && (
-                        <p className="text-xs text-muted-foreground italic">Note: {report.adminNote}</p>
+                        <p className="text-xs text-muted-foreground italic">Not: {report.adminNote}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => setSelectedReportId(report.id)}>
-                        <Eye className="h-3.5 w-3.5" /> View
+                        <Eye className="h-3.5 w-3.5" /> Görüntüle
                       </Button>
                       {report.status !== "approved" && (
                         <Button size="sm" className="gap-1.5 h-8 bg-green-600 hover:bg-green-700 text-white" onClick={() => updateStatus(report.id, "approved")}>
-                          <CheckCircle className="h-3.5 w-3.5" /> Approve
+                          <CheckCircle className="h-3.5 w-3.5" /> Onayla
                         </Button>
                       )}
                       {report.status !== "missing" && (
                         <Button variant="outline" size="sm" className="gap-1.5 h-8 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => updateStatus(report.id, "missing")}>
-                          <AlertCircle className="h-3.5 w-3.5" /> Missing
+                          <AlertCircle className="h-3.5 w-3.5" /> Eksik
                         </Button>
                       )}
                       {report.status !== "rejected" && (
                         <Button variant="outline" size="sm" className="gap-1.5 h-8 border-red-300 text-red-700 hover:bg-red-50" onClick={() => updateStatus(report.id, "rejected")}>
-                          <XCircle className="h-3.5 w-3.5" /> Reject
+                          <XCircle className="h-3.5 w-3.5" /> Reddet
                         </Button>
                       )}
                     </div>
@@ -137,7 +141,7 @@ export default function AdminReview() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Report Detail — {reportDetail?.userName ?? `User #${reportDetail?.userId}`}
+              Rapor Detayı — {reportDetail?.userName ?? `Kullanıcı #${reportDetail?.userId}`}
               {reportDetail?.userPersonnelNo ? ` (#${reportDetail.userPersonnelNo})` : ""}
             </DialogTitle>
           </DialogHeader>
@@ -146,11 +150,11 @@ export default function AdminReview() {
               <div className="flex items-center gap-3">
                 <ReportStatusBadge status={reportDetail.status} />
                 <span className="text-sm text-muted-foreground">{reportDetail.date}</span>
-                <span className="text-sm text-muted-foreground">{reportDetail.itemCount} reels</span>
+                <span className="text-sm text-muted-foreground">{reportDetail.itemCount} reel</span>
               </div>
 
               {reportDetail.items.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">No reels submitted</p>
+                <p className="text-sm text-muted-foreground py-4 text-center">Reel gönderilmemiş</p>
               ) : (
                 <div className="space-y-2">
                   {reportDetail.items.map(item => (
@@ -158,7 +162,7 @@ export default function AdminReview() {
                       <AtSign className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-muted-foreground font-medium">{item.instagramUsername ?? "unknown"}</span>
+                          <span className="text-sm text-muted-foreground font-medium">{item.instagramUsername ?? "bilinmiyor"}</span>
                         </div>
                         <a href={item.reelsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate block">
                           {item.reelsUrl}
@@ -174,9 +178,9 @@ export default function AdminReview() {
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Admin Note</label>
+                <label className="text-sm font-medium">Admin Notu</label>
                 <Textarea
-                  placeholder="Add a note..."
+                  placeholder="Not ekle..."
                   value={adminNote || reportDetail.adminNote || ""}
                   onChange={e => setAdminNote(e.target.value)}
                   rows={3}
@@ -188,27 +192,27 @@ export default function AdminReview() {
                   updateStatus(reportDetail.id, "approved", adminNote || reportDetail.adminNote || undefined);
                   setSelectedReportId(null);
                 }}>
-                  <CheckCircle className="h-4 w-4" /> Approve
+                  <CheckCircle className="h-4 w-4" /> Onayla
                 </Button>
                 <Button variant="outline" className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => {
                   updateStatus(reportDetail.id, "missing", adminNote || undefined);
                   setSelectedReportId(null);
                 }}>
-                  <AlertCircle className="h-4 w-4" /> Mark Missing
+                  <AlertCircle className="h-4 w-4" /> Eksik İşaretle
                 </Button>
                 <Button variant="outline" className="gap-1.5 border-red-300 text-red-700 hover:bg-red-50" onClick={() => {
                   updateStatus(reportDetail.id, "rejected", adminNote || undefined);
                   setSelectedReportId(null);
                 }}>
-                  <XCircle className="h-4 w-4" /> Reject
+                  <XCircle className="h-4 w-4" /> Reddet
                 </Button>
                 {adminNote && (
                   <Button variant="outline" onClick={() => {
                     updateMutation.mutate({ id: reportDetail.id, data: { adminNote } }, {
-                      onSuccess: () => { toast({ title: "Note saved" }); invalidate(); setSelectedReportId(null); }
+                      onSuccess: () => { toast({ title: "Not kaydedildi" }); invalidate(); setSelectedReportId(null); }
                     });
                   }}>
-                    Save Note
+                    Notu Kaydet
                   </Button>
                 )}
               </div>

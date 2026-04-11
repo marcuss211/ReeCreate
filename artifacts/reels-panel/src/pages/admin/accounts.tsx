@@ -16,8 +16,8 @@ import { Plus, Search, Edit, Instagram, AtSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const createSchema = z.object({
-  userId: z.coerce.number().int().positive("Select a user"),
-  instagramUsername: z.string().min(1, "Username is required").regex(/^[a-zA-Z0-9._]+$/, "Invalid Instagram username"),
+  userId: z.coerce.number().int().positive("Kullanıcı seçiniz"),
+  instagramUsername: z.string().min(1, "Kullanıcı adı zorunludur").regex(/^[a-zA-Z0-9._]+$/, "Geçersiz Instagram kullanıcı adı"),
   profileUrl: z.string().url().optional().or(z.literal("")),
   description: z.string().optional(),
 });
@@ -54,12 +54,12 @@ export default function AdminAccounts() {
   function onCreateSubmit(values: z.infer<typeof createSchema>) {
     createMutation.mutate({ data: { ...values, profileUrl: values.profileUrl || null, description: values.description || null } }, {
       onSuccess: () => {
-        toast({ title: "Account created" });
+        toast({ title: "Hesap oluşturuldu" });
         setCreateOpen(false);
         createForm.reset();
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e?.message, variant: "destructive" }),
+      onError: (e: any) => toast({ title: "Hata", description: e?.message, variant: "destructive" }),
     });
   }
 
@@ -67,18 +67,18 @@ export default function AdminAccounts() {
     if (!editAccount) return;
     updateMutation.mutate({ id: editAccount.id, data: { ...values, profileUrl: values.profileUrl || null } }, {
       onSuccess: () => {
-        toast({ title: "Account updated" });
+        toast({ title: "Hesap güncellendi" });
         setEditAccount(null);
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e?.message, variant: "destructive" }),
+      onError: (e: any) => toast({ title: "Hata", description: e?.message, variant: "destructive" }),
     });
   }
 
   function toggleStatus(account: any) {
     updateMutation.mutate({ id: account.id, data: { status: account.status === "active" ? "passive" : "active" } }, {
       onSuccess: () => {
-        toast({ title: `Account ${account.status === "active" ? "deactivated" : "activated"}` });
+        toast({ title: `Hesap ${account.status === "active" ? "pasife alındı" : "aktife alındı"}` });
         invalidate();
       },
     });
@@ -88,21 +88,21 @@ export default function AdminAccounts() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Instagram Accounts</h1>
-          <p className="text-sm text-muted-foreground">{accounts?.length ?? 0} total accounts</p>
+          <h1 className="text-2xl font-bold tracking-tight">Instagram Hesapları</h1>
+          <p className="text-sm text-muted-foreground">Toplam {accounts?.length ?? 0} hesap</p>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="h-4 w-4" /> Add Account</Button>
+            <Button className="gap-2"><Plus className="h-4 w-4" /> Hesap Ekle</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Add Instagram Account</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Instagram Hesabı Ekle</DialogTitle></DialogHeader>
             <Form {...createForm}>
               <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
                 <FormField control={createForm.control} name="userId" render={({ field }) => (
-                  <FormItem><FormLabel>Assign to User</FormLabel>
+                  <FormItem><FormLabel>Kullanıcıya Ata</FormLabel>
                     <Select onValueChange={v => field.onChange(Number(v))} value={String(field.value ?? "")}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Kullanıcı seçin" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {(users ?? []).map(u => (
                           <SelectItem key={u.id} value={String(u.id)}>
@@ -113,21 +113,21 @@ export default function AdminAccounts() {
                     </Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={createForm.control} name="instagramUsername" render={({ field }) => (
-                  <FormItem><FormLabel>Instagram Username</FormLabel>
+                  <FormItem><FormLabel>Instagram Kullanıcı Adı</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
-                        <Input className="pl-7" placeholder="username" {...field} />
+                        <Input className="pl-7" placeholder="kullanici_adi" {...field} />
                       </div>
                     </FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={createForm.control} name="profileUrl" render={({ field }) => (
-                  <FormItem><FormLabel>Profile URL (optional)</FormLabel><FormControl><Input placeholder="https://instagram.com/username" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Profil URL (isteğe bağlı)</FormLabel><FormControl><Input placeholder="https://instagram.com/kullanici_adi" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={createForm.control} name="description" render={({ field }) => (
-                  <FormItem><FormLabel>Description (optional)</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Açıklama (isteğe bağlı)</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" className="w-full" disabled={createMutation.isPending}>Add Account</Button>
+                <Button type="submit" className="w-full" disabled={createMutation.isPending}>Hesap Ekle</Button>
               </form>
             </Form>
           </DialogContent>
@@ -136,7 +136,7 @@ export default function AdminAccounts() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Search accounts or users..." value={search} onChange={e => setSearch(e.target.value)} />
+        <Input className="pl-9" placeholder="Hesap veya kullanıcı ara..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       <Card className="border-card-border">
@@ -145,10 +145,10 @@ export default function AdminAccounts() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Instagram Account</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Assigned To</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Instagram Hesabı</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Atanan Kullanıcı</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Durum</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">İşlemler</th>
                 </tr>
               </thead>
               <tbody>
@@ -162,7 +162,7 @@ export default function AdminAccounts() {
                   <tr>
                     <td colSpan={4} className="py-12 text-center text-muted-foreground">
                       <Instagram className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                      No accounts found
+                      Hesap bulunamadı
                     </td>
                   </tr>
                 ) : (
@@ -181,7 +181,7 @@ export default function AdminAccounts() {
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={a.status === "active" ? "default" : "secondary"} className={a.status === "active" ? "bg-green-100 text-green-800" : ""}>
-                          {a.status === "active" ? "Active" : "Passive"}
+                          {a.status === "active" ? "Aktif" : "Pasif"}
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
@@ -193,7 +193,7 @@ export default function AdminAccounts() {
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
                           <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => toggleStatus(a)}>
-                            {a.status === "active" ? "Deactivate" : "Activate"}
+                            {a.status === "active" ? "Pasife Al" : "Aktife Al"}
                           </Button>
                         </div>
                       </td>
@@ -208,29 +208,29 @@ export default function AdminAccounts() {
 
       <Dialog open={!!editAccount} onOpenChange={open => !open && setEditAccount(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Edit Account: @{editAccount?.instagramUsername}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Hesabı Düzenle: @{editAccount?.instagramUsername}</DialogTitle></DialogHeader>
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
               <FormField control={editForm.control} name="instagramUsername" render={({ field }) => (
-                <FormItem><FormLabel>Instagram Username</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Instagram Kullanıcı Adı</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={editForm.control} name="profileUrl" render={({ field }) => (
-                <FormItem><FormLabel>Profile URL</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Profil URL</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={editForm.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>Description</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Açıklama</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={editForm.control} name="status" render={({ field }) => (
-                <FormItem><FormLabel>Status</FormLabel>
+                <FormItem><FormLabel>Durum</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value ?? "active"}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="passive">Passive</SelectItem>
+                      <SelectItem value="active">Aktif</SelectItem>
+                      <SelectItem value="passive">Pasif</SelectItem>
                     </SelectContent>
                   </Select><FormMessage /></FormItem>
               )} />
-              <Button type="submit" className="w-full" disabled={updateMutation.isPending}>Save Changes</Button>
+              <Button type="submit" className="w-full" disabled={updateMutation.isPending}>Değişiklikleri Kaydet</Button>
             </form>
           </Form>
         </DialogContent>

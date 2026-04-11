@@ -70,7 +70,7 @@ router.post("/instagram-accounts", requireAdmin, async (req, res): Promise<void>
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, parsed.data.userId));
   if (!user) {
-    res.status(400).json({ error: "User not found" });
+    res.status(400).json({ error: "Kullanıcı bulunamadı" });
     return;
   }
 
@@ -116,7 +116,7 @@ router.get("/instagram-accounts/:id", requireAuth, async (req, res): Promise<voi
     .where(eq(instagramAccountsTable.id, id));
 
   if (!result) {
-    res.status(404).json({ error: "Account not found" });
+    res.status(404).json({ error: "Hesap bulunamadı" });
     return;
   }
 
@@ -144,7 +144,7 @@ router.patch("/instagram-accounts/:id", requireAdmin, async (req, res): Promise<
   const { id } = paramsResult.data;
   const [existing] = await db.select().from(instagramAccountsTable).where(eq(instagramAccountsTable.id, id));
   if (!existing) {
-    res.status(404).json({ error: "Account not found" });
+    res.status(404).json({ error: "Hesap bulunamadı" });
     return;
   }
 

@@ -1,0 +1,117 @@
+I want you to do a full end-to-end system review and testing pass on the current project.
+
+Your job is not only to run the app and say “it works”.
+I want you to inspect the entire system carefully, test the real flows, identify weak points, catch bugs, and fix issues where necessary.
+
+Please do all of the following:
+
+1. Full project review
+- Review the current backend, frontend, database flow, authentication flow, admin flow, and user flow
+- Check whether the current implementation is clean, consistent, and production-safe
+- Identify broken logic, weak validation, missing error handling, UI inconsistencies, and possible edge-case failures
+
+2. Run and test the whole system
+Test the entire app end-to-end, including:
+- login flow
+- logout flow
+- admin-only access
+- user-only access
+- authentication/session behavior
+- protected routes
+- report/reel submission flow
+- wallet change flow
+- audit log behavior
+- new “Odeme Takip” flow if already added
+- create / list / edit functionality across the system
+
+3. Functional bug detection
+Check for:
+- broken buttons
+- forms that fail silently
+- invalid success states
+- missing validation
+- API/frontend mismatch
+- incorrect loading states
+- stale data after save
+- list/update issues
+- duplicate submission issues
+- permission issues
+- wrong redirects
+- broken empty states
+- date handling issues
+- timezone issues
+- data not persisting correctly
+
+4. Security and permission testing
+Check whether there are any remaining issues with:
+- route protection
+- admin/user separation
+- ownership control
+- cookie/session handling
+- CORS behavior
+- error handling
+- rate limits
+- invalid input acceptance
+- duplicate spam possibilities
+- unauthorized access attempts
+- insecure API responses
+
+5. Database and data integrity review
+Check whether:
+- records are saved correctly
+- edits update correctly
+- relations are valid
+- data shape is clean
+- duplicate or inconsistent records can happen
+- nullable fields or defaults create hidden bugs
+- future scaling issues are visible in the schema
+
+6. UX and admin workflow review
+Review whether the app is practical to use in real admin operations.
+Check for:
+- too many clicks
+- confusing flow
+- unclear labels
+- weak table/form usability
+- bad validation messages
+- missing confirmation states
+- poor edit/revise experience
+- layout or mobile issues if relevant
+
+7. Fix what is reasonable
+Do not only list problems.
+If you find clear bugs, weak logic, bad validation, or broken UX, fix them directly in the codebase where reasonable.
+Do not rebuild the whole project unnecessarily.
+Keep the current system structure unless a change is needed.
+
+8. Create a final report in this exact format:
+
+A) Working correctly
+- list the flows/features that are working correctly
+
+B) Bugs found
+- list each bug clearly
+- explain what caused it
+- explain how serious it is
+
+C) Issues fixed
+- list what you fixed directly in the code
+
+D) Still risky / needs manual decision
+- list things that are not exactly broken but may need product or admin decision
+
+E) Changed files
+- show which files you modified
+
+F) Manual test checklist
+- give me step-by-step manual test cases I can run myself for the most important flows
+
+9. Very important
+- Do not give me a fake generic QA summary
+- Do not only say “everything looks good”
+- Actually inspect the code, run the system, test the flows, and verify behavior
+- If something cannot be fully tested, say exactly why
+- Be honest about weak points and edge cases
+
+Goal:
+I want this project to be reviewed like a real production candidate, so find problems, fix what should be fixed, and tell me what still needs attention.

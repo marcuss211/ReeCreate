@@ -3,6 +3,7 @@ import { db, dailyReportsTable, reportItemsTable, usersTable, instagramAccountsT
 import { eq, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { ExportDailyReportQueryParams } from "@workspace/api-zod";
+import * as XLSX from "xlsx";
 
 const router: IRouter = Router();
 
@@ -61,38 +62,55 @@ router.get("/export/daily-report", requireAdmin, async (req, res): Promise<void>
 
     if (items.length === 0) {
       rows.push({
-        date: report.date,
-        userName: report.userName ?? "",
-        personnelNo: report.personnelNo ?? "",
-        reportStatus: report.status,
-        adminNote: report.adminNote ?? "",
-        instagramUsername: "",
-        reelsUrl: "",
-        contentDate: "",
-        enteredAt: "",
+        Tarih: report.date,
+        "Kullanıcı Adı": report.userName ?? "",
+        "Personel No": report.personnelNo ?? "",
+        "Rapor Durumu": report.status,
+        "Admin Notu": report.adminNote ?? "",
+        "Instagram Hesabı": "",
+        "Reels URL": "",
+        "İçerik Tarihi": "",
+        "Giriş Zamanı": "",
       });
     } else {
       for (const item of items) {
         rows.push({
-          date: report.date,
-          userName: report.userName ?? "",
-          personnelNo: report.personnelNo ?? "",
-          reportStatus: report.status,
-          adminNote: report.adminNote ?? "",
-          instagramUsername: item.instagramUsername ?? "",
-          reelsUrl: item.reelsUrl,
-          contentDate: item.contentDate,
-          enteredAt: item.enteredAt,
+          Tarih: report.date,
+          "Kullanıcı Adı": report.userName ?? "",
+          "Personel No": report.personnelNo ?? "",
+          "Rapor Durumu": report.status,
+          "Admin Notu": report.adminNote ?? "",
+          "Instagram Hesabı": item.instagramUsername ?? "",
+          "Reels URL": item.reelsUrl,
+          "İçerik Tarihi": item.contentDate,
+          "Giriş Zamanı": item.enteredAt,
         });
       }
     }
   }
 
+  if (format === "xlsx") {
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Günlük Rapor");
+
+    // Auto-size columns
+    const colWidths = Object.keys(rows[0] ?? {}).map(key => ({
+      wch: Math.max(key.length, ...rows.map(r => String(r[key] ?? "").length)) + 2,
+    }));
+    worksheet["!cols"] = colWidths;
+
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="gunluk-rapor-${date}.xlsx"`);
+    res.send(buffer);
+    return;
+  }
+
   const csv = toCSV(rows);
-  const filename = `daily-report-${date}.csv`;
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  res.send(csv);
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="gunluk-rapor-${date}.csv"`);
+  res.send("\uFEFF" + csv); // BOM for proper Turkish character support in Excel
 });
 
 export default router;

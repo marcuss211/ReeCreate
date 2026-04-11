@@ -191,7 +191,6 @@ router.post("/auth/login", loginRateLimit, async (req, res): Promise<void> => {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     },
-    token,
   });
 });
 
@@ -215,7 +214,7 @@ router.post("/auth/logout", requireAuth, async (req, res): Promise<void> => {
 router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id));
   if (!user) {
-    res.status(401).json({ error: "User not found" });
+    res.status(401).json({ error: "Kullanıcı bulunamadı" });
     return;
   }
   res.json({

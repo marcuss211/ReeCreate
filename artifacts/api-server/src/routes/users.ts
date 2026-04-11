@@ -56,24 +56,24 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
   const { name, username, password, role, personnelNo } = parsed.data;
 
   if (password.length < 8) {
-    res.status(400).json({ error: "Password must be at least 8 characters long" });
+    res.status(400).json({ error: "Şifre en az 8 karakter olmalıdır" });
     return;
   }
 
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.username, username));
   if (existing) {
-    res.status(400).json({ error: "Username already taken" });
+    res.status(400).json({ error: "Bu kullanıcı adı zaten kullanılıyor" });
     return;
   }
 
   if (personnelNo != null) {
     const [existingNo] = await db.select().from(usersTable).where(eq(usersTable.personnelNo, personnelNo));
     if (existingNo) {
-      res.status(400).json({ error: "Personnel number already in use" });
+      res.status(400).json({ error: "Bu personel numarası zaten kullanılıyor" });
       return;
     }
     if (personnelNo < 300 || personnelNo > 2000) {
-      res.status(400).json({ error: "Personnel number must be between 300 and 2000" });
+      res.status(400).json({ error: "Personel numarası 300 ile 2000 arasında olmalıdır" });
       return;
     }
   }
@@ -120,7 +120,7 @@ router.get("/users/:id", requireAuth, async (req, res): Promise<void> => {
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
   if (!user) {
-    res.status(404).json({ error: "User not found" });
+    res.status(404).json({ error: "Kullanıcı bulunamadı" });
     return;
   }
 
@@ -170,19 +170,29 @@ router.patch("/users/:id", requireAdmin, async (req, res): Promise<void> => {
   const { id } = paramsResult.data;
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, id));
   if (!existing) {
-    res.status(404).json({ error: "User not found" });
+    res.status(404).json({ error: "Kullanıcı bulunamadı" });
     return;
   }
 
   const updateData: Record<string, unknown> = {};
   if (parsed.data.name != null) updateData.name = parsed.data.name;
-  if (parsed.data.username != null) updateData.username = parsed.data.username;
+  if (parsed.data.username != null) {
+    // Ensure new username is not taken by another user
+    if (parsed.data.username !== existing.username) {
+      const [taken] = await db.select().from(usersTable).where(eq(usersTable.username, parsed.data.username));
+      if (taken) {
+        res.status(400).json({ error: "Bu kullanıcı adı zaten kullanılıyor" });
+        return;
+      }
+    }
+    updateData.username = parsed.data.username;
+  }
   if (parsed.data.role != null) updateData.role = parsed.data.role;
   if (parsed.data.status != null) updateData.status = parsed.data.status;
   if ("personnelNo" in parsed.data) {
     const pNo = parsed.data.personnelNo;
     if (pNo != null && (pNo < 300 || pNo > 2000)) {
-      res.status(400).json({ error: "Personnel number must be between 300 and 2000" });
+      res.status(400).json({ error: "Personel numarası 300 ile 2000 arasında olmalıdır" });
       return;
     }
     updateData.personnelNo = pNo ?? null;
@@ -226,14 +236,14 @@ router.post("/users/:id/reset-password", requireAdmin, async (req, res): Promise
   }
 
   if (parsed.data.newPassword.length < 8) {
-    res.status(400).json({ error: "Password must be at least 8 characters long" });
+    res.status(400).json({ error: "Şifre en az 8 karakter olmalıdır" });
     return;
   }
 
   const { id } = paramsResult.data;
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, id));
   if (!existing) {
-    res.status(404).json({ error: "User not found" });
+    res.status(404).json({ error: "Kullanıcı bulunamadı" });
     return;
   }
 

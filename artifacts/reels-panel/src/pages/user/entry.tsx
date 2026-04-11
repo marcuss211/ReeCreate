@@ -197,6 +197,10 @@ export default function UserEntry() {
       toast({ title: "Lütfen bekleyin", description: "Reeller kaydediliyor...", variant: "destructive" });
       return;
     }
+    if (items.length === 0) {
+      toast({ title: "Reel gerekli", description: "En az bir reel eklemeden rapor gönderilemez.", variant: "destructive" });
+      return;
+    }
     updateMutation.mutate({ id: reportId, data: { status: "submitted" } }, {
       onSuccess: () => {
         toast({ title: "Rapor gönderildi", description: "Günlük raporunuz incelemeye alındı." });

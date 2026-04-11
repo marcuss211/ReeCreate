@@ -139,7 +139,7 @@ router.get("/daily-reports/:id", requireAuth, async (req, res): Promise<void> =>
     .where(eq(dailyReportsTable.id, id));
 
   if (!report) {
-    res.status(404).json({ error: "Report not found" });
+    res.status(404).json({ error: "Rapor bulunamadı" });
     return;
   }
 
@@ -182,7 +182,7 @@ router.patch("/daily-reports/:id", requireAuth, async (req, res): Promise<void> 
   const { id } = paramsResult.data;
   const [existing] = await db.select().from(dailyReportsTable).where(eq(dailyReportsTable.id, id));
   if (!existing) {
-    res.status(404).json({ error: "Report not found" });
+    res.status(404).json({ error: "Rapor bulunamadı" });
     return;
   }
 
@@ -196,27 +196,47 @@ router.patch("/daily-reports/:id", requireAuth, async (req, res): Promise<void> 
   if (parsed.data.status) {
     updateData.status = parsed.data.status;
     if (parsed.data.status === "submitted") {
+      // Require at least one item before allowing submission
+      const [itemCountRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(reportItemsTable)
+        .where(eq(reportItemsTable.reportId, id));
+      const itemCount = itemCountRow?.count ?? 0;
+
+      if (itemCount === 0 && req.user?.role !== "admin") {
+        res.status(400).json({ error: "En az bir reel eklemeden rapor gönderilemez" });
+        return;
+      }
+
       updateData.submittedAt = new Date();
 
       const now = new Date();
       const delayDays = daysBetween(existing.date, now);
 
       if (delayDays > 0) {
-        const previousFlags = await db
+        // Check if a delay flag already exists for this report (prevent duplicates on re-submit)
+        const [existingFlag] = await db
           .select()
           .from(delayFlagsTable)
-          .where(eq(delayFlagsTable.userId, existing.userId));
+          .where(eq(delayFlagsTable.reportId, id));
 
-        const isRepeat = previousFlags.filter(f => f.delayDayCount > 0).length >= 3 ? 1 : 0;
-        const isBulk = delayDays > 5 ? 1 : 0;
+        if (!existingFlag) {
+          const previousFlags = await db
+            .select()
+            .from(delayFlagsTable)
+            .where(eq(delayFlagsTable.userId, existing.userId));
 
-        await db.insert(delayFlagsTable).values({
-          userId: existing.userId,
-          reportId: id,
-          delayDayCount: delayDays,
-          isRepeatIssue: isRepeat,
-          isBulkEntryFlag: isBulk,
-        });
+          const isRepeat = previousFlags.filter(f => f.delayDayCount > 0).length >= 3 ? 1 : 0;
+          const isBulk = delayDays > 5 ? 1 : 0;
+
+          await db.insert(delayFlagsTable).values({
+            userId: existing.userId,
+            reportId: id,
+            delayDayCount: delayDays,
+            isRepeatIssue: isRepeat,
+            isBulkEntryFlag: isBulk,
+          });
+        }
 
         if (delayDays > 2) {
           updateData.status = "late";

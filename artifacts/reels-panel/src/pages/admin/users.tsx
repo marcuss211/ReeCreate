@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const createUserSchema = z.object({
   name: z.string().min(1, "Ad zorunludur"),
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır"),
-  password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+  password: z.string().min(8, "Şifre en az 8 karakter olmalıdır"),
   role: z.string().default("user"),
   personnelNo: z.preprocess(v => v === "" ? null : Number(v), z.number().int().min(300).max(2000).nullable().optional()),
 });
@@ -32,7 +32,7 @@ const editUserSchema = z.object({
 });
 
 const resetPasswordSchema = z.object({
-  newPassword: z.string().min(6, "En az 6 karakter olmalıdır"),
+  newPassword: z.string().min(8, "En az 8 karakter olmalıdır"),
 });
 
 export default function AdminUsers() {

@@ -50,7 +50,7 @@ router.post("/report-items", requireAuth, reportSubmitRateLimit, async (req, res
 
   const [report] = await db.select().from(dailyReportsTable).where(eq(dailyReportsTable.id, reportId));
   if (!report) {
-    res.status(404).json({ error: "Report not found" });
+    res.status(404).json({ error: "Rapor bulunamadı" });
     return;
   }
 
@@ -116,13 +116,13 @@ router.delete("/report-items/:id", requireAuth, async (req, res): Promise<void> 
 
   const [item] = await db.select().from(reportItemsTable).where(eq(reportItemsTable.id, id));
   if (!item) {
-    res.status(404).json({ error: "Item not found" });
+    res.status(404).json({ error: "Kayıt bulunamadı" });
     return;
   }
 
   const [report] = await db.select().from(dailyReportsTable).where(eq(dailyReportsTable.id, item.reportId));
   if (!report) {
-    res.status(404).json({ error: "Report not found" });
+    res.status(404).json({ error: "Rapor bulunamadı" });
     return;
   }
 

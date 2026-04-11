@@ -11,6 +11,7 @@ import delayFlagsRouter from "./delay-flags";
 import auditLogsRouter from "./audit-logs";
 import dashboardRouter from "./dashboard";
 import exportRouter from "./export";
+import paymentAgreementsRouter from "./payment-agreements";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(delayFlagsRouter);
 router.use(auditLogsRouter);
 router.use(dashboardRouter);
 router.use(exportRouter);
+router.use(paymentAgreementsRouter);
 
 export default router;

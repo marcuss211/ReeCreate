@@ -16,6 +16,7 @@ import AdminMonitoring from "@/pages/admin/monitoring";
 import AdminWallets from "@/pages/admin/wallets";
 import AdminAudit from "@/pages/admin/audit";
 import AdminExport from "@/pages/admin/export";
+import AdminOdemeTakip from "@/pages/admin/odeme-takip";
 import TwoFactorSetup from "@/pages/admin/two-factor-setup";
 import TwoFactorVerify from "@/pages/admin/two-factor-verify";
 import UserDashboard from "@/pages/user/dashboard";
@@ -80,6 +81,11 @@ function Router() {
       <Route path="/admin/export">
         <ProtectedRoute requireAdmin>
           <AdminLayout><AdminExport /></AdminLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/odeme-takip">
+        <ProtectedRoute requireAdmin>
+          <AdminLayout><AdminOdemeTakip /></AdminLayout>
         </ProtectedRoute>
       </Route>
 

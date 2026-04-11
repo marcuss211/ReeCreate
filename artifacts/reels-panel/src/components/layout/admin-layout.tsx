@@ -12,6 +12,7 @@ import {
   Download,
   LogOut,
   Menu,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -21,6 +22,7 @@ const adminNav = [
   { name: "Review", href: "/admin/review", icon: CheckSquare },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Accounts", href: "/admin/accounts", icon: Instagram },
+  { name: "Ödeme Takip", href: "/admin/odeme-takip", icon: CreditCard },
   { name: "Monitoring", href: "/admin/monitoring", icon: ActivitySquare },
   { name: "Wallets", href: "/admin/wallets", icon: Wallet },
   { name: "Audit Logs", href: "/admin/audit", icon: History },

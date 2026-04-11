@@ -5,3 +5,4 @@ export * from "./report-items";
 export * from "./wallet-addresses";
 export * from "./audit-logs";
 export * from "./delay-flags";
+export * from "./payment-agreements";

@@ -21,6 +21,10 @@ interface Agreement {
   startDate: string;
   endDate: string;
   notes: string | null;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  paymentStatus: "Ödenmedi" | "Kısmi Ödendi" | "Tam Ödendi";
   createdAt: string;
   updatedAt: string;
 }
@@ -36,9 +40,24 @@ function getStatus(endDate: string): AgreementStatus {
 
 function StatusBadge({ endDate }: { endDate: string }) {
   const status = getStatus(endDate);
-  if (status === "Aktif") return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">Aktif</Badge>;
-  if (status === "Bugun Bitiyor") return <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">Bugün Bitiyor</Badge>;
+  if (status === "Aktif")
+    return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">Aktif</Badge>;
+  if (status === "Bugun Bitiyor")
+    return <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">Bugün Bitiyor</Badge>;
   return <Badge className="bg-red-100 text-red-800 border-red-200 hover:bg-red-100">Süresi Doldu</Badge>;
+}
+
+function PaymentStatusBadge({ status }: { status: Agreement["paymentStatus"] }) {
+  if (status === "Tam Ödendi")
+    return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">Tam Ödendi</Badge>;
+  if (status === "Kısmi Ödendi")
+    return <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100">Kısmi Ödendi</Badge>;
+  return <Badge className="bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-100">Ödenmedi</Badge>;
+}
+
+// Para formatı: 1234.50 → "₺1.234,50"
+function fmt(n: number): string {
+  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 2 }).format(n);
 }
 
 function AccountTags({ accounts, onChange }: { accounts: string[]; onChange: (v: string[]) => void }) {
@@ -51,9 +70,7 @@ function AccountTags({ accounts, onChange }: { accounts: string[]; onChange: (v:
       return trimmed ? `@${trimmed}` : "";
     }).filter(Boolean);
     const next = [...accounts];
-    for (const v of values) {
-      if (!next.includes(v)) next.push(v);
-    }
+    for (const v of values) if (!next.includes(v)) next.push(v);
     onChange(next);
     setInput("");
   }
@@ -67,10 +84,6 @@ function AccountTags({ accounts, onChange }: { accounts: string[]; onChange: (v:
     }
   }
 
-  function removeAccount(idx: number) {
-    onChange(accounts.filter((_, i) => i !== idx));
-  }
-
   return (
     <div
       className="min-h-[42px] w-full border border-input rounded-md px-3 py-2 flex flex-wrap gap-1.5 items-center cursor-text bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
@@ -79,7 +92,7 @@ function AccountTags({ accounts, onChange }: { accounts: string[]; onChange: (v:
       {accounts.map((acc, i) => (
         <span key={i} className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded px-2 py-0.5 text-sm font-mono">
           {acc}
-          <button type="button" onClick={() => removeAccount(i)} className="hover:text-destructive ml-0.5">
+          <button type="button" onClick={() => onChange(accounts.filter((_, j) => j !== i))} className="hover:text-destructive ml-0.5">
             <X className="h-3 w-3" />
           </button>
         </span>
@@ -102,6 +115,8 @@ interface FormState {
   startDate: string;
   endDate: string;
   notes: string;
+  totalAmount: string;
+  paidAmount: string;
 }
 
 const emptyForm = (): FormState => ({
@@ -109,6 +124,8 @@ const emptyForm = (): FormState => ({
   startDate: format(new Date(), "yyyy-MM-dd"),
   endDate: "",
   notes: "",
+  totalAmount: "",
+  paidAmount: "0",
 });
 
 function agreementToForm(a: Agreement): FormState {
@@ -117,7 +134,20 @@ function agreementToForm(a: Agreement): FormState {
     startDate: a.startDate,
     endDate: a.endDate,
     notes: a.notes ?? "",
+    totalAmount: String(a.totalAmount),
+    paidAmount: String(a.paidAmount),
   };
+}
+
+// Formdan türetilen ödeme bilgileri
+function derivePayment(totalStr: string, paidStr: string) {
+  const total = parseFloat(totalStr) || 0;
+  const paid  = parseFloat(paidStr)  || 0;
+  const remaining = Math.max(0, total - paid);
+  let paymentStatus: Agreement["paymentStatus"] = "Ödenmedi";
+  if (paid > 0 && paid < total) paymentStatus = "Kısmi Ödendi";
+  else if (paid > 0 && paid >= total) paymentStatus = "Tam Ödendi";
+  return { total, paid, remaining, paymentStatus };
 }
 
 export default function AdminOdemeTakip() {
@@ -147,21 +177,29 @@ export default function AdminOdemeTakip() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["payment-agreements"] });
 
+  // Form doğrulama
+  function getFormError(): string | null {
+    if (form.accounts.length === 0) return "En az bir Instagram hesabı giriniz";
+    if (!form.startDate || !form.endDate) return "Başlangıç ve bitiş tarihlerini giriniz";
+    const total = parseFloat(form.totalAmount);
+    const paid  = parseFloat(form.paidAmount);
+    if (form.totalAmount && (isNaN(total) || total < 0)) return "Toplam tutar geçerli bir sayı olmalı";
+    if (isNaN(paid) || paid < 0) return "Ödenen tutar geçerli bir sayı olmalı";
+    if (!isNaN(total) && !isNaN(paid) && paid > total) return "Ödenen tutar toplam tutardan fazla olamaz";
+    return null;
+  }
+
   async function handleSave() {
-    if (form.accounts.length === 0) {
-      toast({ title: "Hata", description: "En az bir Instagram hesabı giriniz", variant: "destructive" });
-      return;
-    }
-    if (!form.startDate || !form.endDate) {
-      toast({ title: "Hata", description: "Başlangıç ve bitiş tarihlerini giriniz", variant: "destructive" });
-      return;
-    }
+    const err = getFormError();
+    if (err) { toast({ title: "Hata", description: err, variant: "destructive" }); return; }
 
     const body = {
       instagramAccounts: form.accounts.join(", "),
       startDate: form.startDate,
       endDate: form.endDate,
       notes: form.notes || undefined,
+      totalAmount: parseFloat(form.totalAmount) || 0,
+      paidAmount:  parseFloat(form.paidAmount)  || 0,
     };
 
     setSaving(true);
@@ -190,21 +228,13 @@ export default function AdminOdemeTakip() {
     }
   }
 
-  function openNew() {
-    setEditTarget(null);
-    setForm(emptyForm());
-    setOpen(true);
-  }
+  function openNew() { setEditTarget(null); setForm(emptyForm()); setOpen(true); }
+  function openEdit(a: Agreement) { setEditTarget(a); setForm(agreementToForm(a)); setOpen(true); }
 
-  function openEdit(a: Agreement) {
-    setEditTarget(a);
-    setForm(agreementToForm(a));
-    setOpen(true);
-  }
+  const { remaining: formRemaining, paymentStatus: formPaymentStatus } = derivePayment(form.totalAmount, form.paidAmount);
 
   const sorted = [...(agreements ?? [])].sort((a, b) => {
-    const sa = getStatus(a.endDate);
-    const sb = getStatus(b.endDate);
+    const sa = getStatus(a.endDate), sb = getStatus(b.endDate);
     const order: Record<AgreementStatus, number> = { "Bugun Bitiyor": 0, "Aktif": 1, "Suresi Doldu": 2 };
     if (order[sa] !== order[sb]) return order[sa] - order[sb];
     return a.endDate.localeCompare(b.endDate);
@@ -239,7 +269,10 @@ export default function AdminOdemeTakip() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Başlangıç</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Bitiş</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Durum</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Notlar</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Toplam Tutar</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ödenen</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Kalan</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Ödeme Durumu</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">İşlemler</th>
                 </tr>
               </thead>
@@ -247,14 +280,14 @@ export default function AdminOdemeTakip() {
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i} className="border-b border-border">
-                      {Array.from({ length: 6 }).map((_, j) => (
-                        <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                      {Array.from({ length: 9 }).map((_, j) => (
+                        <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
                       ))}
                     </tr>
                   ))
                 ) : sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={9} className="py-12 text-center text-muted-foreground">
                       Henüz kayıt yok. "Yeni Kayıt" butonuyla ekleyebilirsiniz.
                     </td>
                   </tr>
@@ -268,17 +301,29 @@ export default function AdminOdemeTakip() {
                           ))}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         {format(parseISO(a.startDate), "d MMM yyyy", { locale: tr })}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         {format(parseISO(a.endDate), "d MMM yyyy", { locale: tr })}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge endDate={a.endDate} />
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
-                        {a.notes ?? "—"}
+                      <td className="px-4 py-3 text-right font-medium tabular-nums whitespace-nowrap">
+                        {a.totalAmount > 0 ? fmt(a.totalAmount) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap text-green-700">
+                        {a.paidAmount > 0 ? fmt(a.paidAmount) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
+                        {a.remainingAmount > 0
+                          ? <span className="text-amber-700 font-medium">{fmt(a.remainingAmount)}</span>
+                          : <span className="text-muted-foreground">—</span>
+                        }
+                      </td>
+                      <td className="px-4 py-3">
+                        <PaymentStatusBadge status={a.paymentStatus} />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
@@ -306,13 +351,15 @@ export default function AdminOdemeTakip() {
         </CardContent>
       </Card>
 
+      {/* Ekleme / Düzenleme Modalı */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editTarget ? "Kaydı Düzenle" : "Yeni Anlaşma Kaydı"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* Instagram hesapları */}
             <div className="space-y-1.5">
               <Label>Instagram Hesapları</Label>
               <AccountTags
@@ -324,6 +371,7 @@ export default function AdminOdemeTakip() {
               </p>
             </div>
 
+            {/* Tarihler */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="startDate">Başlangıç Tarihi</Label>
@@ -346,6 +394,49 @@ export default function AdminOdemeTakip() {
               </div>
             </div>
 
+            {/* Para alanları */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="totalAmount">Toplam Anlaşma Tutarı (₺)</Label>
+                <Input
+                  id="totalAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.totalAmount}
+                  onChange={e => setForm(f => ({ ...f, totalAmount: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="paidAmount">Ödenen Tutar (₺)</Label>
+                <Input
+                  id="paidAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.paidAmount}
+                  onChange={e => setForm(f => ({ ...f, paidAmount: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Otomatik hesaplanan alanlar */}
+            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Kalan Tutar</span>
+                <span className={`font-medium tabular-nums ${formRemaining > 0 ? "text-amber-700" : "text-muted-foreground"}`}>
+                  {formRemaining > 0 ? fmt(formRemaining) : "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Ödeme Durumu</span>
+                <PaymentStatusBadge status={formPaymentStatus} />
+              </div>
+            </div>
+
+            {/* Notlar */}
             <div className="space-y-1.5">
               <Label htmlFor="notes">Notlar</Label>
               <Textarea
@@ -359,9 +450,7 @@ export default function AdminOdemeTakip() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
-              İptal
-            </Button>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>İptal</Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? "Kaydediliyor…" : editTarget ? "Güncelle" : "Kaydet"}
             </Button>
@@ -369,6 +458,7 @@ export default function AdminOdemeTakip() {
         </DialogContent>
       </Dialog>
 
+      {/* Silme onayı */}
       <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -12,6 +12,7 @@ import auditLogsRouter from "./audit-logs";
 import dashboardRouter from "./dashboard";
 import exportRouter from "./export";
 import paymentAgreementsRouter from "./payment-agreements";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(auditLogsRouter);
 router.use(dashboardRouter);
 router.use(exportRouter);
 router.use(paymentAgreementsRouter);
+router.use(reportsRouter);
 
 export default router;

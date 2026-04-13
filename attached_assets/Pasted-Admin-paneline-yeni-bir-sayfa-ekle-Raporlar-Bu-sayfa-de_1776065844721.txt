@@ -1,0 +1,134 @@
+Admin paneline yeni bir sayfa ekle: Raporlar
+
+Bu sayfa detaylı raporlama ekranı olacak ve sistemdeki tüm önemli verileri filtrelenebilir şekilde gösterecek.
+
+İstediğim yapı şu şekilde:
+
+1. Tarih filtreleme
+
+Sayfanın üst kısmında rapor filtresi olsun:
+
+Günlük
+Haftalık
+Aylık
+Tüm Zamanlar
+
+İsteğe bağlı olarak ayrıca özel tarih aralığı da eklenebilir.
+
+Seçilen filtreye göre sayfadaki tüm veriler, kartlar, tablolar ve grafikler otomatik güncellensin.
+
+2. Üst özet kartları
+
+Raporlar sayfasında üst bölümde şu özet kartlar olsun:
+
+Toplam Kullanıcı
+Aktif Kullanıcı
+Toplam Reels
+Onaylı Reels
+Onay Bekleyen Reels
+Reddedilen Reels
+Eksik Gönderim Yapan Kullanıcı
+Gecikmeli Kullanıcı
+Toplam Anlaşma Sayısı
+Toplam Anlaşma Tutarı
+Toplam Ödenen Tutar
+Toplam Kalan Tutar
+Tam Ödenen Anlaşmalar
+Kısmi Ödenen Anlaşmalar
+Ödenmeyen Anlaşmalar
+3. Reels / gönderim raporu
+
+Ayrı bir bölümde reels performansı gösterilsin:
+
+Seçilen tarih aralığında toplam gönderim
+Günlük ortalama gönderim
+Kullanıcı başına ortalama gönderim
+Onay oranı
+Red oranı
+Bekleyen oranı
+En çok reels gönderen kullanıcılar
+En çok eksik gönderen kullanıcılar
+En çok reddedilen reels sahibi kullanıcılar
+
+Bunlar için grafik ve tablo kullan:
+
+Zaman bazlı reels gönderim grafiği
+Onay / red / bekleyen dağılım grafiği
+Kullanıcı performans sıralama tablosu
+4. Kullanıcı performans tablosu
+
+Her kullanıcı için detaylı performans tablosu oluştur:
+
+Kullanıcı adı
+Toplam hesap sayısı
+Toplam reels gönderimi
+Onaylı gönderim
+Reddedilen gönderim
+Eksik gün sayısı
+Gecikme sayısı
+Son aktivite tarihi
+Ortalama günlük gönderim
+Onay oranı
+
+Bu tablo filtreye göre güncellensin.
+
+5. Ödeme / anlaşma raporu
+
+Ödeme Takip modülü ile bağlantılı detaylı finansal rapor alanı oluştur:
+
+Toplam anlaşma adedi
+Toplam anlaşma tutarı
+Toplam ödenen
+Toplam kalan
+Tam ödenen anlaşma sayısı
+Kısmi ödenen anlaşma sayısı
+Ödenmeyen anlaşma sayısı
+Yaklaşan bitişli anlaşmalar
+Süresi dolmuş anlaşmalar
+
+Tablo kolonları:
+
+Instagram hesabı
+Kullanıcı
+Başlangıç tarihi
+Bitiş tarihi
+Toplam tutar
+Ödenen
+Kalan
+Ödeme durumu
+Son güncelleme tarihi
+
+Grafikler:
+
+Ödeme trend grafiği
+Ödeme durumu dağılımı
+En yüksek bütçeli hesaplar
+6. Sistem ve risk raporu
+
+Denetim / güvenlik tarafı için de özet alan ekle:
+
+Toplu giriş şüphesi
+Cüzdan değişimi
+Son 24 saat kritik olaylar
+Son admin işlemleri
+Son eklenen / silinen / düzenlenen kayıtlar
+7. Teknik beklenti
+Tüm veriler gerçek backend verisinden gelsin
+Frontend’de statik veri kullanılmasın
+Sayfa filtre değişince tüm alanlar tek seferde güncellensin
+Gerekirse reports için merkezi bir API / summary endpoint oluştur
+Hesaplamalar tutarlı olsun
+Loading, empty state ve error state düzgün yönetilsin
+Tarih filtrelerinde timezone sorunu olmasın
+Kod modüler ve sürdürülebilir olsun
+8. UI beklentisi
+Mevcut admin panel tasarımına uyumlu olsun
+Temiz, profesyonel ve okunaklı bir rapor sayfası olsun
+Mobil, tablet ve desktop uyumlu olsun
+Kartlar, grafikler ve tablolar responsive çalışsın
+9. Ekstra
+CSV / Excel / PDF dışa aktarma desteği ekle
+Gerekirse özet kartlara tıklayınca detay görünümü açılabilsin
+
+Amaç:
+Tek bir “Raporlar” sayfasında günlük, haftalık, aylık ve tüm zamanlar bazında kullanıcı performansı, reels verimi, ödeme durumu ve sistem aktivitelerini net şekilde görebilmek istiyorum.

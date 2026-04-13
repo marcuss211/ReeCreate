@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   CreditCard,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -23,6 +24,7 @@ const adminNav = [
   { name: "Kullanıcılar", href: "/admin/users", icon: Users },
   { name: "Hesaplar", href: "/admin/accounts", icon: Instagram },
   { name: "Ödeme Takip", href: "/admin/odeme-takip", icon: CreditCard },
+  { name: "Raporlar", href: "/admin/raporlar", icon: BarChart3 },
   { name: "İzleme", href: "/admin/monitoring", icon: ActivitySquare },
   { name: "Cüzdanlar", href: "/admin/wallets", icon: Wallet },
   { name: "Denetim Logu", href: "/admin/audit", icon: History },

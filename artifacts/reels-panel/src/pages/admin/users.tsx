@@ -306,10 +306,19 @@ export default function AdminUsers() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Kullanıcıyı Sil</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{deleteUser?.name}</strong> (@{deleteUser?.username}) kalıcı olarak silinecek. Bu işlem geri alınamaz.
-              <br /><br />
-              <span className="text-amber-600 font-medium">Not:</span> Raporları veya atanmış Instagram hesapları olan kullanıcılar silinemez.
+            <AlertDialogDescription asChild>
+              <div>
+                <p>
+                  <strong>{deleteUser?.name}</strong> (@{deleteUser?.username}) ve bu kullanıcıya ait tüm veriler kalıcı olarak silinecek:
+                </p>
+                <ul className="mt-2 list-disc list-inside space-y-0.5 text-sm">
+                  <li>Tüm günlük raporlar ve reel kayıtları</li>
+                  <li>Tüm Instagram hesapları</li>
+                  <li>Cüzdan adresi ve değişiklik geçmişi</li>
+                  <li>Gecikme bayrakları</li>
+                </ul>
+                <p className="mt-2 font-medium text-destructive">Bu işlem geri alınamaz.</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

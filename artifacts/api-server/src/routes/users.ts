@@ -1,7 +1,17 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable, instagramAccountsTable, dailyReportsTable, delayFlagsTable, walletAddressesTable } from "@workspace/db";
-import { eq, like, or, and, sql } from "drizzle-orm";
+import {
+  db,
+  usersTable,
+  instagramAccountsTable,
+  dailyReportsTable,
+  reportItemsTable,
+  delayFlagsTable,
+  walletAddressesTable,
+  walletAddressLogsTable,
+  auditLogsTable,
+} from "@workspace/db";
+import { eq, inArray, like, or } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { createAuditLog } from "../lib/audit";
 import {
@@ -279,18 +289,7 @@ router.delete("/users/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  const [reportCheck] = await db.select().from(dailyReportsTable).where(eq(dailyReportsTable.userId, id));
-  if (reportCheck) {
-    res.status(400).json({ error: "Bu kullanıcıya ait raporlar bulunduğu için silinemez" });
-    return;
-  }
-
-  const [accountCheck] = await db.select().from(instagramAccountsTable).where(eq(instagramAccountsTable.userId, id));
-  if (accountCheck) {
-    res.status(400).json({ error: "Bu kullanıcıya atanmış Instagram hesapları var, önce hesapları silin veya başka kullanıcıya atayın" });
-    return;
-  }
-
+  // Audit logu silmeden ÖNCE yaz
   await createAuditLog({
     userId: req.user?.id,
     actionType: "delete_user",
@@ -300,8 +299,58 @@ router.delete("/users/:id", requireAdmin, async (req, res): Promise<void> => {
     req,
   });
 
-  await db.delete(walletAddressesTable).where(eq(walletAddressesTable.userId, id));
+  // Kullanıcıya ait rapor ID'leri
+  const userReports = await db
+    .select({ id: dailyReportsTable.id })
+    .from(dailyReportsTable)
+    .where(eq(dailyReportsTable.userId, id));
+  const reportIds = userReports.map(r => r.id);
+
+  // Kullanıcıya ait Instagram hesap ID'leri
+  const userAccounts = await db
+    .select({ id: instagramAccountsTable.id })
+    .from(instagramAccountsTable)
+    .where(eq(instagramAccountsTable.userId, id));
+  const accountIds = userAccounts.map(a => a.id);
+
+  // 1. Delay flags (daily_reports'a FK var, önce sil)
   await db.delete(delayFlagsTable).where(eq(delayFlagsTable.userId, id));
+
+  // 2. Kullanıcının raporlarına ait report_items
+  if (reportIds.length > 0) {
+    await db.delete(reportItemsTable).where(inArray(reportItemsTable.reportId, reportIds));
+  }
+
+  // 3. Kullanıcının Instagram hesaplarını kullanan diğer report_items
+  if (accountIds.length > 0) {
+    await db.delete(reportItemsTable).where(inArray(reportItemsTable.instagramAccountId, accountIds));
+  }
+
+  // 4. Günlük raporlar
+  await db.delete(dailyReportsTable).where(eq(dailyReportsTable.userId, id));
+
+  // 5. Instagram hesapları
+  await db.delete(instagramAccountsTable).where(eq(instagramAccountsTable.userId, id));
+
+  // 6. Cüzdan değişiklik logları (kendi logları)
+  await db.delete(walletAddressLogsTable).where(eq(walletAddressLogsTable.userId, id));
+
+  // 7. Başka kullanıcıların loglarında changed_by referanslarını temizle
+  await db
+    .update(walletAddressLogsTable)
+    .set({ changedBy: null })
+    .where(eq(walletAddressLogsTable.changedBy, id));
+
+  // 8. Denetim loglarında user_id referansını temizle (geçmişi koru)
+  await db
+    .update(auditLogsTable)
+    .set({ userId: null })
+    .where(eq(auditLogsTable.userId, id));
+
+  // 9. Cüzdan adresi
+  await db.delete(walletAddressesTable).where(eq(walletAddressesTable.userId, id));
+
+  // 10. Kullanıcıyı sil
   await db.delete(usersTable).where(eq(usersTable.id, id));
 
   res.status(204).send();

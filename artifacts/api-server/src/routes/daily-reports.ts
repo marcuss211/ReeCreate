@@ -77,7 +77,15 @@ router.get("/daily-reports", requireAuth, async (req, res): Promise<void> => {
     itemCounts = Object.fromEntries(counts.map(c => [c.id, c.count]));
   }
 
-  res.json(reports.map(r => ({ ...r, itemCount: itemCounts[r.id] ?? 0 })));
+  const enriched = reports.map(r => ({ ...r, itemCount: itemCounts[r.id] ?? 0 }));
+
+  // For admin listing, only surface reports that actually have submissions.
+  // Empty/draft records created before a user adds any reels must not appear.
+  const result = req.user?.role === "admin"
+    ? enriched.filter(r => r.itemCount > 0)
+    : enriched;
+
+  res.json(result);
 });
 
 router.post("/daily-reports", requireAuth, async (req, res): Promise<void> => {

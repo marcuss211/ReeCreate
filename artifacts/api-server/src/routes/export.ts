@@ -3,7 +3,7 @@ import { db, dailyReportsTable, reportItemsTable, usersTable, instagramAccountsT
 import { eq, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { ExportDailyReportQueryParams } from "@workspace/api-zod";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 const router: IRouter = Router();
 
@@ -90,17 +90,19 @@ router.get("/export/daily-report", requireAdmin, async (req, res): Promise<void>
   }
 
   if (format === "xlsx") {
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Günlük Rapor");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Günlük Rapor");
 
-    // Auto-size columns
-    const colWidths = Object.keys(rows[0] ?? {}).map(key => ({
-      wch: Math.max(key.length, ...rows.map(r => String(r[key] ?? "").length)) + 2,
+    const headers = Object.keys(rows[0] ?? {});
+    worksheet.columns = headers.map(key => ({
+      header: key,
+      key,
+      width: Math.max(key.length, ...rows.map(r => String(r[key] ?? "").length)) + 2,
     }));
-    worksheet["!cols"] = colWidths;
 
-    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    rows.forEach(row => worksheet.addRow(row));
+
+    const buffer = await workbook.xlsx.writeBuffer();
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="gunluk-rapor-${date}.xlsx"`);
     res.send(buffer);

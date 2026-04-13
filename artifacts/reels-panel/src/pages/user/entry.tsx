@@ -213,6 +213,7 @@ export default function UserEntry() {
   const reportReady = !!reportId && !createReportMutation.isPending;
   const currentStatus = reportDetail?.status ?? "draft";
   const isDraft = currentStatus === "draft";
+  const canSubmit = isDraft || currentStatus === "missing" || currentStatus === "rejected";
   const items = reportDetail?.items ?? [];
   const itemsByAccount = items.reduce<Record<number, typeof items>>((acc, item) => {
     if (!acc[item.instagramAccountId]) acc[item.instagramAccountId] = [];
@@ -337,8 +338,8 @@ export default function UserEntry() {
         })
       )}
 
-      {/* Submit button — only shown when status is draft */}
-      {isDraft && activeAccounts.length > 0 && reportDetail && (
+      {/* Submit button — shown for draft, missing, and rejected statuses */}
+      {canSubmit && activeAccounts.length > 0 && reportDetail && (
         <div className="flex gap-3 pt-2">
           <Button className="gap-2" onClick={handleSubmit} disabled={updateMutation.isPending || pendingItems.some(p => p.saving)}>
             <CheckCircle className="h-4 w-4" />

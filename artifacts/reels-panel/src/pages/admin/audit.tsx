@@ -9,24 +9,30 @@ import { Search, History } from "lucide-react";
 
 const ACTION_COLORS: Record<string, string> = {
   login: "bg-blue-100 text-blue-800",
+  login_failed: "bg-red-100 text-red-800",
   logout: "bg-gray-100 text-gray-700",
   create_user: "bg-green-100 text-green-800",
   update_user: "bg-yellow-100 text-yellow-800",
+  delete_user: "bg-red-100 text-red-800",
   reset_password: "bg-orange-100 text-orange-800",
   create_instagram_account: "bg-violet-100 text-violet-800",
   update_instagram_account: "bg-violet-100 text-violet-800",
+  delete_instagram_account: "bg-red-100 text-red-800",
   update_daily_report: "bg-blue-100 text-blue-800",
   update_wallet_address: "bg-red-100 text-red-800",
 };
 
 const ACTION_LABELS: Record<string, string> = {
   login: "Giriş",
+  login_failed: "Giriş Başarısız",
   logout: "Çıkış",
   create_user: "Kullanıcı Oluşturuldu",
   update_user: "Kullanıcı Güncellendi",
+  delete_user: "Kullanıcı Silindi",
   reset_password: "Şifre Sıfırlandı",
   create_instagram_account: "Hesap Oluşturuldu",
   update_instagram_account: "Hesap Güncellendi",
+  delete_instagram_account: "Hesap Silindi",
   update_daily_report: "Rapor Güncellendi",
   update_wallet_address: "Cüzdan Güncellendi",
   "2fa_setup_started": "2FA Kurulum Başladı",

@@ -1,0 +1,111 @@
+Uygulamada çok sayıda geliştirme ve değişiklik yapıldı. Artık bu sistemi canlıya almadan önce baştan sona kapsamlı bir final kontrol, teknik denetim ve production hazırlık sürecinden geçirmek istiyorum.
+
+Bunu basit bir göz kontrolü gibi değil, gerçek bir “pre-launch audit / final QA / production readiness check” olarak ele al.
+
+İstediğim kapsam aşağıdaki gibi:
+
+1. Genel sistem kontrolü
+
+* Tüm modülleri baştan sona tek tek kontrol et
+* Yapılan son geliştirmelerin birbiriyle çakışıp çakışmadığını incele
+* Bozuk sayfa, eksik alan, yanlış yönlendirme, çalışmayan buton veya kırık akış varsa tespit et ve düzelt
+* Uygulamanın genel işleyişinde tutarsızlık bırakan alan varsa toparla
+
+2. Tüm modüllerin fonksiyonel testi
+   Aşağıdaki alanların hepsini uçtan uca test et:
+
+* Login / çıkış
+* Dashboard
+* İnceleme
+* Kullanıcılar
+* Hesaplar
+* Ödeme Takip
+* Raporlar
+* İzleme
+* Cüzdanlar
+* Denetim Logu
+* Dışa Aktar
+* Tüm modal, form ve filtre alanları
+
+Kontrol edilmesi gerekenler:
+
+* Create / edit / delete / update işlemleri düzgün çalışıyor mu
+* Kayıt sonrası veriler anında doğru güncelleniyor mu
+* Liste, filtre, arama ve detay ekranları tutarlı mı
+* Form validation doğru mu
+* Hatalı veri girişlerinde sistem düzgün tepki veriyor mu
+* Sayfa yenileme sonrası veri kaybı veya UI bozulması oluyor mu
+
+3. Veri doğruluğu ve hesaplama kontrolleri
+
+* Dashboard metrikleri doğru hesaplanıyor mu
+* Günlük / haftalık / aylık / tüm zamanlar filtreleri tutarlı mı
+* Ödeme Takip tarafında toplam, ödenen, kalan ve ödeme durumu doğru güncelleniyor mu
+* Raporlar sayfasındaki tüm özetler, grafikler ve tablolar birbirleriyle uyumlu mu
+* Aynı veri farklı sayfalarda çelişkili görünüyorsa düzelt
+* Tarih bazlı hesaplamalarda timezone veya filtre hatası var mı kontrol et
+
+4. Günlük iş akışı testi
+   Sistemi gerçek kullanım senaryosuna göre test et:
+
+* Admin kullanıcı oluşturur
+* Kullanıcı sisteme girer
+* Hesap eklenir veya kullanıcıya atanır
+* Kullanıcı reels/link girer
+* Bu kayıt inceleme ekranına düşer
+* Admin onaylar / reddeder / eksik işaretler
+* Dashboard ve raporlara doğru yansır
+* Ödeme takibi oluşturulur ve güncellenir
+* Dışa aktarma tarafı çalışır
+
+Bu zincirde kopukluk varsa tespit edip düzelt
+
+5. Mobil ve responsive audit
+
+* Uygulamanın tamamını mobil, tablet ve desktop ekranlarda kontrol et
+* Sidebar, tablolar, kartlar, modal’lar, input’lar ve butonlar responsive çalışıyor mu kontrol et
+* Sağdan taşma, yatay scroll, üst üste binme, sıkışma, bozuk spacing, okunmayan font, kapanmayan modal gibi sorunlar varsa düzelt
+* Dokunmatik kullanım açısından problemli alanları iyileştir
+
+6. UI / UX kalite kontrol
+
+* Görsel olarak dengesiz veya amatör duran alanları toparla
+* Tüm sayfalarda hizalama, spacing, kart yapısı, form düzeni ve buton mantığı tutarlı olsun
+* Mevcut tasarım dilini bozma ama genel kaliteyi yükselt
+* Kullanıcı deneyimini bozan küçük ama önemli detayları düzelt
+
+7. Teknik kontrol
+
+* Console error, network error, broken request, state uyumsuzluğu ve render problemlerini kontrol et
+* Kullanılmayan veya çakışan eski kod parçaları varsa temizle
+* Gerekirse component yapısını toparla
+* API çağrıları, loading state, empty state ve error state alanlarını düzgün hale getir
+* Frontend ve backend veri akışı tutarlı olsun
+
+8. Güvenlik ve production hazırlığı
+   Canlıya almadan önce production seviyesinde son kontrolleri yap:
+
+* Debug / test ayarları kapalı olsun
+* Secret, env ve API anahtarları güvenli yapılandırılsın
+* Yetkilendirme ve admin erişimi kontrol edilsin
+* Gereksiz açık endpoint veya riskli alan varsa düzelt
+* Rate limit, authentication, temel güvenlik önlemleri gözden geçirilsin
+* Sunucu tarafı production mantığına uygun hale getirilsin
+
+9. Performans ve stabilite
+
+* Uygulama gereksiz yavaşlayan alanlar içeriyor mu kontrol et
+* Büyük kullanıcı listeleri, raporlar ve tablolar performanslı çalışıyor mu bak
+* Arama, filtreleme, listeleme ve modal açılışlarında gereksiz yük varsa optimize et
+* 70–80 kullanıcı aktif kullanımına uygun temel stabilite hazırlığını yap
+
+10. Live öncesi son teslim
+    İş sonunda sadece düzeltmeleri yapmakla kalma; kısa bir final özet de ver:
+
+* Hangi sorunlar bulundu
+* Neler düzeltildi
+* Hangi alanlar optimize edildi
+* Canlıya çıkmadan önce dikkat edilmesi gereken ekstra bir risk var mı
+
+İstediğim sonuç:
+Uygulama canlıya alınmadan önce baştan sona profesyonel şekilde denetlensin, bug’lar temizlensin, veri tutarlılığı doğrulansın, mobil uyumluluk tamam olsun, güvenlik ve production hazırlığı yapılsın ve sistem stabil bir şekilde live’a hazır hale getirilsin.

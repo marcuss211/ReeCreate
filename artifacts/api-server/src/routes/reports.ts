@@ -198,23 +198,59 @@ router.get("/reports/timeline", requireAdmin, async (req, res): Promise<void> =>
   const rawPeriod = req.query.period as string;
   const period: Period = ["daily", "weekly", "monthly", "alltime"].includes(rawPeriod) ? (rawPeriod as Period) : "alltime";
   const days = getPeriodDays(period);
-  const results = [];
   const now = new Date();
+  const fromDate = new Date(now);
+  fromDate.setDate(fromDate.getDate() - (days - 1));
+  fromDate.setHours(0, 0, 0, 0);
+  const fromDateStr = fromDate.toISOString().split("T")[0]!;
 
+  // Single aggregation query: report counts grouped by date + status
+  const reportRows = await db
+    .select({
+      date: dailyReportsTable.date,
+      status: dailyReportsTable.status,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(dailyReportsTable)
+    .where(gte(dailyReportsTable.date, fromDateStr))
+    .groupBy(dailyReportsTable.date, dailyReportsTable.status);
+
+  // Single aggregation query: reels counts grouped by content_date
+  const reelsRows = await db
+    .select({
+      date: reportItemsTable.contentDate,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(reportItemsTable)
+    .where(gte(reportItemsTable.contentDate, fromDateStr))
+    .groupBy(reportItemsTable.contentDate);
+
+  // Build lookup maps
+  const reportMap: Record<string, Record<string, number>> = {};
+  for (const row of reportRows) {
+    if (!reportMap[row.date]) reportMap[row.date] = {};
+    reportMap[row.date]![row.status] = row.count;
+  }
+  const reelsMap: Record<string, number> = {};
+  for (const row of reelsRows) {
+    reelsMap[row.date] = row.count;
+  }
+
+  // Build results array over the requested date range
+  const results = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-
-    const dayReports = await db.select().from(dailyReportsTable).where(eq(dailyReportsTable.date, dateStr));
-    const approved = dayReports.filter(r => r.status === "approved").length;
-    const pending  = dayReports.filter(r => r.status === "submitted").length;
-    const rejected = dayReports.filter(r => r.status === "rejected").length;
-    const missing  = dayReports.filter(r => r.status === "missing").length;
-
-    const [reelsRow] = await db.select({ count: sql<number>`count(*)::int` }).from(reportItemsTable).where(eq(reportItemsTable.contentDate, dateStr));
-
-    results.push({ date: dateStr, approved, pending, rejected, missing, reels: reelsRow?.count ?? 0 });
+    const dateStr = d.toISOString().split("T")[0]!;
+    const s = reportMap[dateStr] ?? {};
+    results.push({
+      date: dateStr,
+      approved: s["approved"] ?? 0,
+      pending:  s["submitted"] ?? 0,
+      rejected: s["rejected"] ?? 0,
+      missing:  s["missing"] ?? 0,
+      reels:    reelsMap[dateStr] ?? 0,
+    });
   }
 
   res.json(results);

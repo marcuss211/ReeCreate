@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, instagramAccountsTable, usersTable, reportItemsTable } from "@workspace/db";
-import { eq, like, and } from "drizzle-orm";
+import { db, instagramAccountsTable, usersTable, reportItemsTable, dailyReportsTable } from "@workspace/db";
+import { eq, like, and, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { createAuditLog } from "../lib/audit";
 import {
@@ -28,6 +28,13 @@ router.get("/instagram-accounts", requireAuth, async (req, res): Promise<void> =
     conditions.push(eq(instagramAccountsTable.status, params.data.status));
   }
 
+  const approvedReelsCountSq = sql<number>`(
+    SELECT COUNT(*)::int FROM ${reportItemsTable} ri
+    JOIN ${dailyReportsTable} dr ON ri.report_id = dr.id
+    WHERE ri.instagram_account_id = ${instagramAccountsTable.id}
+      AND dr.status = 'approved'
+  )`;
+
   const baseQuery = db
     .select({
       id: instagramAccountsTable.id,
@@ -40,6 +47,7 @@ router.get("/instagram-accounts", requireAuth, async (req, res): Promise<void> =
       updatedAt: instagramAccountsTable.updatedAt,
       userName: usersTable.name,
       userPersonnelNo: usersTable.personnelNo,
+      approvedReelsCount: approvedReelsCountSq,
     })
     .from(instagramAccountsTable)
     .leftJoin(usersTable, eq(instagramAccountsTable.userId, usersTable.id));

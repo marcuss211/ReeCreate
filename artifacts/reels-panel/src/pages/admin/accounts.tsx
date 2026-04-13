@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Instagram, AtSign, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Instagram, AtSign, Trash2, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const createSchema = z.object({
@@ -161,6 +161,7 @@ export default function AdminAccounts() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Instagram Hesabı</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Atanan Kullanıcı</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Durum</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Onaylı Reels</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">İşlemler</th>
                 </tr>
               </thead>
@@ -168,12 +169,12 @@ export default function AdminAccounts() {
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i} className="border-b border-border">
-                      {Array.from({ length: 4 }).map((_, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>)}
+                      {Array.from({ length: 5 }).map((_, j) => <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>)}
                     </tr>
                   ))
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={5} className="py-12 text-center text-muted-foreground">
                       <Instagram className="mx-auto mb-2 h-8 w-8 opacity-40" />
                       Hesap bulunamadı
                     </td>
@@ -196,6 +197,13 @@ export default function AdminAccounts() {
                         <Badge variant={a.status === "active" ? "default" : "secondary"} className={a.status === "active" ? "bg-green-100 text-green-800" : ""}>
                           {a.status === "active" ? "Aktif" : "Pasif"}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          <span className="font-medium tabular-nums">{(a as any).approvedReelsCount ?? 0}</span>
+                          <span className="text-muted-foreground">reel</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">

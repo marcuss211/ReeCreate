@@ -340,12 +340,12 @@ export default function AdminOdemeTakip() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ödeme Takip</h1>
           <p className="text-sm text-muted-foreground">Instagram hesabı anlaşmalarını yönet</p>
         </div>
-        <Button onClick={openNew} className="gap-2">
+        <Button onClick={openNew} className="gap-2 shrink-0">
           <Plus className="h-4 w-4" />
           Yeni Kayıt
         </Button>
@@ -584,7 +584,7 @@ export default function AdminOdemeTakip() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="startDate">Başlangıç Tarihi</Label>
                 <Input
@@ -606,7 +606,7 @@ export default function AdminOdemeTakip() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="totalAmount">Toplam Anlaşma Tutarı (₺)</Label>
                 <Input

@@ -255,7 +255,7 @@ export default function AdminRaporlar() {
           </h1>
           <p className="text-sm text-muted-foreground">Detaylı sistem ve performans raporları</p>
         </div>
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+        <div className="flex flex-wrap items-center gap-1 bg-muted rounded-lg p-1">
           {(["daily", "weekly", "monthly", "alltime"] as Period[]).map(p => (
             <button
               key={p}
@@ -404,9 +404,9 @@ export default function AdminRaporlar() {
 
       {/* ── BÖLÜM 3: KULLANICI PERFORMANS TABLOSU ── */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold border-b border-border pb-2 flex-1">Kullanıcı Performans Tablosu</h2>
-          <Button variant="outline" size="sm" onClick={exportUsers} className="gap-1.5 ml-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-base font-semibold border-b border-border pb-2 flex-1 min-w-0">Kullanıcı Performans Tablosu</h2>
+          <Button variant="outline" size="sm" onClick={exportUsers} className="gap-1.5 shrink-0">
             <Download className="h-3.5 w-3.5" /> CSV
           </Button>
         </div>
@@ -479,9 +479,9 @@ export default function AdminRaporlar() {
 
       {/* ── BÖLÜM 4: ÖDEME / ANLAŞMA RAPORU ── */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold border-b border-border pb-2 flex-1">Ödeme / Anlaşma Raporu</h2>
-          <Button variant="outline" size="sm" onClick={exportPayments} className="gap-1.5 ml-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-base font-semibold border-b border-border pb-2 flex-1 min-w-0">Ödeme / Anlaşma Raporu</h2>
+          <Button variant="outline" size="sm" onClick={exportPayments} className="gap-1.5 shrink-0">
             <Download className="h-3.5 w-3.5" /> CSV
           </Button>
         </div>

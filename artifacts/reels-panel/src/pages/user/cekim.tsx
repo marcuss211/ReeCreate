@@ -123,8 +123,8 @@ export default function UserCekim() {
             </Form>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-4">
-                <div>
+              <div className="flex items-start justify-between gap-3 flex-wrap rounded-xl border border-border bg-muted/30 p-4">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground mb-1">TRC20 Adresi</p>
                   <p className="font-mono text-sm break-all">{currentWallet.walletAddress}</p>
                 </div>

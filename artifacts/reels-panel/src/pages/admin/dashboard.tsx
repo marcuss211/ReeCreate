@@ -57,7 +57,7 @@ function StatCard({ title, value, icon, colorClass, isLoading }: StatCardProps) 
             {isLoading ? (
               <Skeleton className="mt-1 h-8 w-16" />
             ) : (
-              <p className="mt-1 text-3xl font-bold">{value ?? 0}</p>
+              <p className="mt-1 text-2xl sm:text-3xl font-bold">{value ?? 0}</p>
             )}
           </div>
           <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${colorClass}`}>
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
             {label} aktiviteye genel bakış
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-1">
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {PERIOD_OPTIONS.map(opt => (
             <Button
               key={opt.value}

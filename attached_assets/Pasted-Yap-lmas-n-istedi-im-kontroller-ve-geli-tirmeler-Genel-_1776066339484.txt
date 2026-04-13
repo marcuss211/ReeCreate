@@ -1,0 +1,58 @@
+Yapılmasını istediğim kontroller ve geliştirmeler:
+
+Genel responsive kontrol
+Tüm sayfaları tek tek kontrol et
+Mobil, tablet ve desktop ekranlarda düzgün çalıştığından emin ol
+Sağdan taşma, yatay scroll, üst üste binme, kırılan grid yapıları, bozuk spacing, hizalama sorunları varsa düzelt
+Kartlar, tablolar, modallar, formlar, butonlar, menüler ve filtre alanları tüm ekran boyutlarında düzgün görünsün
+Mobil uyumluluk
+Sidebar mobilde düzgün çalışsın
+Gerekirse hamburger menu / drawer yapısı kullan
+Mobilde menü ekranı kaplamasın, kullanımı kolay olsun
+Butonlar, inputlar, seçim kutuları ve modal içeriği parmakla rahat kullanılabilecek boyutta olsun
+Font boyutları mobilde okunabilir olsun
+Modal ve popup’lar küçük ekranda ekran dışına taşmasın
+Tablolar mobilde bozuluyorsa uygun şekilde card layout, horizontal scroll veya responsive table mantığıyla düzeltilsin
+Sayfa bazlı detaylı kontrol
+Şu modüllerin tamamını kontrol et:
+Dashboard
+İnceleme
+Kullanıcılar
+Hesaplar
+Ödeme Takip
+İzleme
+Cüzdanlar
+Denetim Logu
+Dışa Aktar
+Login / Admin giriş ekranı
+Tüm modal ve form alanları
+Genel bug ve hata taraması
+Uygulamadaki sorunlu alanları tespit et
+Çalışmayan buton, eksik aksiyon, hatalı form davranışı, güncellenmeyen veri, yanlış hesaplama, bozuk filtre, hatalı modal, state senkronizasyon sorunu varsa düzelt
+Create / edit / delete / update akışlarını test et
+Veriler kayıt olduktan sonra UI anında doğru güncelleniyor mu kontrol et
+Sayfa yenilemeden sonra veri tutarlılığı bozuluyor mu kontrol et
+Konsolda hata veren alanları tespit et ve düzelt
+Boş veri, loading ve hata durumlarını düzgün yönet
+Tasarım ve kullanım kalitesi
+Mevcut tasarım dilini bozma
+Sadece responsive ve usability iyileştirmesi yap
+Mobilde çok sıkışık görünen alanlarda spacing, padding ve font ölçeklerini optimize et
+Görsel olarak dengesiz duran alanları toparla
+Tüm ekranlarda temiz ve profesyonel görünüm sağla
+Teknik beklenti
+Tüm projeyi genel olarak audit et
+Responsive kırılımları sistemli şekilde düzenle
+Gerekirse ortak reusable responsive component mantığı kur
+Kod tekrarını azalt
+Kırık alanları geçici değil kalıcı şekilde düzelt
+UI, frontend state ve backend veri akışını birlikte kontrol et
+Sadece görünümü değil işlevselliği de doğrula
+Teslim beklentim
+Uygulamanın tamamında mobil uyumluluk sağlanmış olsun
+Sorunlu alanlar tespit edilip düzeltilmiş olsun
+Hatalı çalışan yerler stabilize edilmiş olsun
+Gerekirse sonunda hangi alanlarda problem bulunduğunu ve nelerin düzeltildiğini kısa kısa listele
+
+İstediğim sonuç:
+Uygulama komple profesyonel şekilde mobile-friendly olsun ve genel sistem taramasından geçirilerek mevcut sorunlar, hatalı alanlar ve kullanım problemleri bulunup düzeltilsin.

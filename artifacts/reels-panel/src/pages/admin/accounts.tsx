@@ -99,7 +99,7 @@ export default function AdminAccounts() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Instagram Hesapları</h1>
           <p className="text-sm text-muted-foreground">Toplam {accounts?.length ?? 0} hesap</p>

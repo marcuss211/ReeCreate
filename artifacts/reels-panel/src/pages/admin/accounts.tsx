@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserCombobox } from "@/components/ui/user-combobox";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Instagram, AtSign, Trash2, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -113,17 +114,22 @@ export default function AdminAccounts() {
             <Form {...createForm}>
               <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
                 <FormField control={createForm.control} name="userId" render={({ field }) => (
-                  <FormItem><FormLabel>Kullanıcıya Ata</FormLabel>
-                    <Select onValueChange={v => field.onChange(Number(v))} value={String(field.value ?? "")}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Kullanıcı seçin" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {(users ?? []).map(u => (
-                          <SelectItem key={u.id} value={String(u.id)}>
-                            {u.name} {u.personnelNo ? `(#${u.personnelNo})` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select><FormMessage /></FormItem>
+                  <FormItem>
+                    <FormLabel>Kullanıcıya Ata</FormLabel>
+                    <FormControl>
+                      <UserCombobox
+                        value={field.value || undefined}
+                        onChange={v => field.onChange(v ?? 0)}
+                        users={(users ?? []).map(u => ({
+                          id: u.id,
+                          name: u.name,
+                          username: u.username,
+                          personnelNo: u.personnelNo,
+                        }))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )} />
                 <FormField control={createForm.control} name="instagramUsername" render={({ field }) => (
                   <FormItem><FormLabel>Instagram Kullanıcı Adı</FormLabel>

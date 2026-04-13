@@ -1,0 +1,75 @@
+Ödeme Takip modülünde ödeme ilerleme mantığını düzelt ve güncelle.
+
+İstediğim senaryo:
+
+* Örnek kayıt:
+
+  * Toplam Anlaşma Tutarı = 5.000 TL
+  * Ödenen = 3.000 TL
+  * Kalan = 2.000 TL
+  * Durum = Kısmi Ödendi
+
+Sonrasında kalan 2.000 TL daha ödendiğinde sistem otomatik olarak:
+
+* Ödenen Tutar = 5.000 TL yapmalı
+* Kalan Tutar = 0 yapmalı
+* Ödeme Durumu = “Tam Ödendi” olarak güncellenmeli
+* Görsel olarak da “Hepsi Ödendi” / “Tam Ödendi” şeklinde yeşil bir onay işareti veya success badge göstermeli
+
+Yapılması gerekenler:
+
+1. Ödeme güncelleme mantığı ekle
+
+* Mevcut kayıtlar sonradan tekrar düzenlenebilsin
+* Yeni ödeme geldikçe sadece “Ödenen Tutar” artırılabilsin veya ödeme ekleme mantığıyla güncellenebilsin
+* Sistem buna göre “Kalan Tutar” ve “Ödeme Durumu”nu otomatik yeniden hesaplasın
+
+2. Kalan ödeme tamamlanınca otomatik kapanış
+
+* Eğer Ödenen Tutar = Toplam Anlaşma Tutarı ise:
+
+  * Kalan = 0
+  * Durum = Tam Ödendi
+  * Yeşil onay ikonu/badge göster
+* Eğer Ödenen Tutar < Toplam Anlaşma Tutarı ise:
+
+  * Durum = Kısmi Ödendi
+* Eğer Ödenen Tutar = 0 ise:
+
+  * Durum = Ödenmedi
+
+3. Bir sonraki ödeme için güncelleme desteği ekle
+
+* Şu an ödeme bilgisi sonradan düzgün güncellenmiyor, bunu düzelt
+* Her anlaşma kaydı için “Düzenle” veya “Ödeme Güncelle” aksiyonu olsun
+* Admin yeni bir ödeme girişi yapabilsin
+* Girilen yeni ödeme mevcut ödenen tutarın üstüne eklensin veya elle güncellenebilsin
+* Değişiklik kaydedilince liste anında yenilensin
+
+4. Validasyon
+
+* Toplam ödeme hiçbir zaman anlaşma tutarını geçmesin
+* Kalan tutar negatif olmasın
+* 2.000 TL kalan varken 3.000 TL ödeme girilirse uyarı ver
+* Sayısal alanlar para formatında düzgün çalışsın
+
+5. Liste ekranı
+
+* Tablodaki şu alanlar anlık doğru güncellensin:
+
+  * Toplam Tutar
+  * Ödenen
+  * Kalan
+  * Ödeme Durumu
+* Tam ödeme tamamlandığında durum alanında yeşil success görünümü olsun
+* Kısmi ödeme varsa mevcut kısmi badge devam etsin
+
+6. Teknik beklenti
+
+* Sadece UI değiştirme, backend mantığını da düzelt
+* Create / Update / List akışlarının hepsi tutarlı çalışsın
+* Kayıt güncellendikten sonra sayfa yenilemeden veri doğru görünmeli
+* Gerekirse ödeme güncelleme için ayrı modal veya ayrı aksiyon ekle
+
+İstenen sonuç:
+Bir anlaşmada örneğin 5.000 TL toplam tutar varsa, önce 3.000 TL ödendiğinde “Kısmi Ödendi” görünsün. Sonra kalan 2.000 TL de ödendiğinde sistem otomatik olarak “Tam Ödendi”ye geçsin, kalan 0 olsun ve yeşil onay işareti görünsün. Ayrıca sonraki ödeme girişleri düzgün şekilde güncellenebilsin.

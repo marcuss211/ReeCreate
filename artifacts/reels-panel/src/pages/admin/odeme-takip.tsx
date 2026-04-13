@@ -11,9 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, X, FileText, Trash2, ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Pencil, X, FileText, Trash2, ChevronsUpDown, ChevronUp, ChevronDown, CheckCircle2, Wallet } from "lucide-react";
 
 type SortKey = "endDate" | "remainingAmount";
 type SortDir = "asc" | "desc";
@@ -52,13 +52,17 @@ function StatusBadge({ endDate }: { endDate: string }) {
 
 function PaymentStatusBadge({ status }: { status: Agreement["paymentStatus"] }) {
   if (status === "Tam Ödendi")
-    return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">Tam Ödendi</Badge>;
+    return (
+      <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100 gap-1 pl-1.5">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Tam Ödendi
+      </Badge>
+    );
   if (status === "Kısmi Ödendi")
     return <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100">Kısmi Ödendi</Badge>;
   return <Badge className="bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-100">Ödenmedi</Badge>;
 }
 
-// Para formatı: 1234.50 → "₺1.234,50"
 function fmt(n: number): string {
   return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 2 }).format(n);
 }
@@ -142,7 +146,6 @@ function agreementToForm(a: Agreement): FormState {
   };
 }
 
-// Formdan türetilen ödeme bilgileri
 function derivePayment(totalStr: string, paidStr: string) {
   const total = parseFloat(totalStr) || 0;
   const paid  = parseFloat(paidStr)  || 0;
@@ -157,11 +160,21 @@ export default function AdminOdemeTakip() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Yeni / Düzenle modal
   const [open, setOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Agreement | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+
+  // Ödeme Ekle modal
+  const [payTarget, setPayTarget] = useState<Agreement | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payLoading, setPayLoading] = useState(false);
+
+  // Silme onayı
   const [deleteTarget, setDeleteTarget] = useState<Agreement | null>(null);
+
+  // Sıralama
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -199,7 +212,7 @@ export default function AdminOdemeTakip() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["payment-agreements"] });
 
-  // Form doğrulama
+  // --- Yeni / Düzenle ---
   function getFormError(): string | null {
     if (form.accounts.length === 0) return "En az bir Instagram hesabı giriniz";
     if (!form.startDate || !form.endDate) return "Başlangıç ve bitiş tarihlerini giriniz";
@@ -253,7 +266,65 @@ export default function AdminOdemeTakip() {
   function openNew() { setEditTarget(null); setForm(emptyForm()); setOpen(true); }
   function openEdit(a: Agreement) { setEditTarget(a); setForm(agreementToForm(a)); setOpen(true); }
 
+  // --- Ödeme Ekle ---
+  function openPayModal(a: Agreement) {
+    setPayTarget(a);
+    setPayAmount("");
+  }
+
+  async function handlePaySave() {
+    if (!payTarget) return;
+
+    const add = parseFloat(payAmount);
+    if (isNaN(add) || add <= 0) {
+      toast({ title: "Hata", description: "Geçerli bir ödeme tutarı giriniz", variant: "destructive" });
+      return;
+    }
+    const newPaid = payTarget.paidAmount + add;
+    if (newPaid > payTarget.totalAmount) {
+      const maxAdd = payTarget.remainingAmount;
+      toast({
+        title: "Hata",
+        description: `Ödeme tutarı kalan tutarı (${fmt(maxAdd)}) aşamaz`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPayLoading(true);
+    try {
+      await customFetch(`/api/payment-agreements/${payTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paidAmount: newPaid }),
+      });
+      const fullyPaid = newPaid >= payTarget.totalAmount;
+      toast({
+        title: fullyPaid ? "Tüm ödemeler tamamlandı!" : "Ödeme kaydedildi",
+        description: fullyPaid
+          ? `${payTarget.instagramAccounts} anlaşması tam ödendi.`
+          : `Yeni ödenen: ${fmt(add)} — Kalan: ${fmt(payTarget.totalAmount - newPaid)}`,
+      });
+      invalidate();
+      setPayTarget(null);
+    } catch (e: any) {
+      toast({ title: "Hata", description: e?.message ?? "Bir hata oluştu", variant: "destructive" });
+    } finally {
+      setPayLoading(false);
+    }
+  }
+
   const { remaining: formRemaining, paymentStatus: formPaymentStatus } = derivePayment(form.totalAmount, form.paidAmount);
+
+  // Ödeme Ekle modalındaki önizleme
+  const payPreviewAdd = parseFloat(payAmount) || 0;
+  const payPreviewNewPaid = payTarget ? Math.min(payTarget.paidAmount + payPreviewAdd, payTarget.totalAmount) : 0;
+  const payPreviewRemaining = payTarget ? Math.max(0, payTarget.totalAmount - payPreviewNewPaid) : 0;
+  const payPreviewStatus: Agreement["paymentStatus"] = payPreviewNewPaid <= 0
+    ? "Ödenmedi"
+    : payPreviewNewPaid >= (payTarget?.totalAmount ?? 0)
+      ? "Tam Ödendi"
+      : "Kısmi Ödendi";
 
   const sorted = [...(agreements ?? [])].sort((a, b) => {
     if (sortKey) {
@@ -261,7 +332,6 @@ export default function AdminOdemeTakip() {
       if (sortKey === "endDate") return a.endDate.localeCompare(b.endDate) * dir;
       if (sortKey === "remainingAmount") return (a.remainingAmount - b.remainingAmount) * dir;
     }
-    // Varsayılan: durum önce, ardından bitiş tarihi artan
     const sa = getStatus(a.endDate), sb = getStatus(b.endDate);
     const order: Record<AgreementStatus, number> = { "Bugun Bitiyor": 0, "Aktif": 1, "Suresi Doldu": 2 };
     if (order[sa] !== order[sb]) return order[sa] - order[sb];
@@ -335,9 +405,15 @@ export default function AdminOdemeTakip() {
                   </tr>
                 ) : (
                   sorted.map(a => (
-                    <tr key={a.id} className="border-b border-border hover:bg-muted/30">
+                    <tr
+                      key={a.id}
+                      className={`border-b border-border hover:bg-muted/30 ${a.paymentStatus === "Tam Ödendi" ? "bg-green-50/40" : ""}`}
+                    >
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {a.paymentStatus === "Tam Ödendi" && (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          )}
                           {a.instagramAccounts.split(",").map(s => s.trim()).filter(Boolean).map((acc, i) => (
                             <span key={i} className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{acc}</span>
                           ))}
@@ -355,13 +431,13 @@ export default function AdminOdemeTakip() {
                       <td className="px-4 py-3 text-right font-medium tabular-nums whitespace-nowrap">
                         {a.totalAmount > 0 ? fmt(a.totalAmount) : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap text-green-700">
-                        {a.paidAmount > 0 ? fmt(a.paidAmount) : <span className="text-muted-foreground">—</span>}
+                      <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap text-green-700 font-medium">
+                        {a.paidAmount > 0 ? fmt(a.paidAmount) : <span className="text-muted-foreground font-normal">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
                         {a.remainingAmount > 0
                           ? <span className="text-amber-700 font-medium">{fmt(a.remainingAmount)}</span>
-                          : <span className="text-muted-foreground">—</span>
+                          : <span className="text-green-600 font-medium">₺0</span>
                         }
                       </td>
                       <td className="px-4 py-3">
@@ -369,6 +445,17 @@ export default function AdminOdemeTakip() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {a.remainingAmount > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openPayModal(a)}
+                              className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <Wallet className="h-3.5 w-3.5" />
+                              Ödeme Ekle
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" onClick={() => openEdit(a)} className="gap-1.5">
                             <Pencil className="h-3.5 w-3.5" />
                             Düzenle
@@ -393,7 +480,87 @@ export default function AdminOdemeTakip() {
         </CardContent>
       </Card>
 
-      {/* Ekleme / Düzenleme Modalı */}
+      {/* Ödeme Ekle Modalı */}
+      <Dialog open={!!payTarget} onOpenChange={open => !open && setPayTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-blue-600" />
+              Ödeme Ekle
+            </DialogTitle>
+            <DialogDescription>
+              {payTarget?.instagramAccounts} anlaşmasına yeni ödeme kaydı
+            </DialogDescription>
+          </DialogHeader>
+
+          {payTarget && (
+            <div className="space-y-4 py-1">
+              {/* Mevcut durum özeti */}
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Toplam Anlaşma</span>
+                  <span className="font-medium tabular-nums">{fmt(payTarget.totalAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Önceki Ödemeler</span>
+                  <span className="font-medium tabular-nums text-green-700">{fmt(payTarget.paidAmount)}</span>
+                </div>
+                <div className="flex justify-between border-t border-border pt-2">
+                  <span className="text-muted-foreground font-medium">Kalan Tutar</span>
+                  <span className="font-bold tabular-nums text-amber-700">{fmt(payTarget.remainingAmount)}</span>
+                </div>
+              </div>
+
+              {/* Yeni ödeme girişi */}
+              <div className="space-y-1.5">
+                <Label htmlFor="payAmount">Yeni Ödeme Tutarı (₺)</Label>
+                <Input
+                  id="payAmount"
+                  type="number"
+                  min="0.01"
+                  max={payTarget.remainingAmount}
+                  step="0.01"
+                  placeholder={`En fazla ${fmt(payTarget.remainingAmount)}`}
+                  value={payAmount}
+                  onChange={e => setPayAmount(e.target.value)}
+                  autoFocus
+                  onKeyDown={e => e.key === "Enter" && handlePaySave()}
+                />
+              </div>
+
+              {/* Sonuç önizlemesi */}
+              {payPreviewAdd > 0 && (
+                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2 text-sm">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Bu ödemeden sonra</p>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Toplam Ödenen</span>
+                    <span className="font-medium tabular-nums text-green-700">{fmt(payPreviewNewPaid)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Kalan</span>
+                    <span className={`font-medium tabular-nums ${payPreviewRemaining > 0 ? "text-amber-700" : "text-green-600"}`}>
+                      {payPreviewRemaining > 0 ? fmt(payPreviewRemaining) : "₺0 — Tamamlandı!"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Durum</span>
+                    <PaymentStatusBadge status={payPreviewStatus} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayTarget(null)} disabled={payLoading}>İptal</Button>
+            <Button onClick={handlePaySave} disabled={payLoading || !payAmount}>
+              {payLoading ? "Kaydediliyor…" : "Ödemeyi Kaydet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Yeni Kayıt / Düzenle Modalı */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -401,7 +568,6 @@ export default function AdminOdemeTakip() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Instagram hesapları */}
             <div className="space-y-1.5">
               <Label>Instagram Hesapları</Label>
               <AccountTags
@@ -413,7 +579,6 @@ export default function AdminOdemeTakip() {
               </p>
             </div>
 
-            {/* Tarihler */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="startDate">Başlangıç Tarihi</Label>
@@ -436,7 +601,6 @@ export default function AdminOdemeTakip() {
               </div>
             </div>
 
-            {/* Para alanları */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="totalAmount">Toplam Anlaşma Tutarı (₺)</Label>
@@ -464,7 +628,6 @@ export default function AdminOdemeTakip() {
               </div>
             </div>
 
-            {/* Otomatik hesaplanan alanlar */}
             <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Kalan Tutar</span>
@@ -478,7 +641,6 @@ export default function AdminOdemeTakip() {
               </div>
             </div>
 
-            {/* Notlar */}
             <div className="space-y-1.5">
               <Label htmlFor="notes">Notlar</Label>
               <Textarea

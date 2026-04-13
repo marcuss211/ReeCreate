@@ -11,7 +11,7 @@ import {
   walletAddressLogsTable,
   auditLogsTable,
 } from "@workspace/db";
-import { eq, inArray, like, or } from "drizzle-orm";
+import { eq, inArray, like, or, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { createAuditLog } from "../lib/audit";
 import {
@@ -63,7 +63,7 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, username, password, role, personnelNo } = parsed.data;
+  const { name, username, password, role } = parsed.data;
 
   if (password.length < 8) {
     res.status(400).json({ error: "Şifre en az 8 karakter olmalıdır" });
@@ -76,27 +76,38 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  if (personnelNo != null) {
-    const [existingNo] = await db.select().from(usersTable).where(eq(usersTable.personnelNo, personnelNo));
-    if (existingNo) {
-      res.status(400).json({ error: "Bu personel numarası zaten kullanılıyor" });
-      return;
-    }
-    if (personnelNo < 300 || personnelNo > 2000) {
-      res.status(400).json({ error: "Personel numarası 300 ile 2000 arasında olmalıdır" });
-      return;
-    }
-  }
-
   const passwordHash = await bcrypt.hash(password, 12);
-  const [user] = await db.insert(usersTable).values({
-    name,
-    username,
-    passwordHash,
-    role: role || "user",
-    status: "active",
-    personnelNo: personnelNo ?? null,
-  }).returning();
+
+  let user: typeof usersTable.$inferSelect;
+  try {
+    user = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(987654321)`);
+
+      const rows = await tx.execute(sql`SELECT COALESCE(MAX(personnel_no), 99) AS max_no FROM users`);
+      const maxNo = Number((rows.rows[0] as { max_no: number }).max_no);
+      const nextNo = maxNo + 1;
+
+      if (nextNo > 40000) {
+        throw Object.assign(new Error("PERSONNEL_NO_LIMIT_REACHED"), { statusCode: 422 });
+      }
+
+      const [created] = await tx.insert(usersTable).values({
+        name,
+        username,
+        passwordHash,
+        role: role || "user",
+        status: "active",
+        personnelNo: nextNo,
+      }).returning();
+      return created;
+    });
+  } catch (err: any) {
+    if (err?.statusCode === 422 || err?.message === "PERSONNEL_NO_LIMIT_REACHED") {
+      res.status(422).json({ error: "Personel numarası limiti (40000) dolmuştur. Yeni kullanıcı oluşturulamaz." });
+      return;
+    }
+    throw err;
+  }
 
   await createAuditLog({
     userId: req.user?.id,
@@ -199,14 +210,6 @@ router.patch("/users/:id", requireAdmin, async (req, res): Promise<void> => {
   }
   if (parsed.data.role != null) updateData.role = parsed.data.role;
   if (parsed.data.status != null) updateData.status = parsed.data.status;
-  if ("personnelNo" in parsed.data) {
-    const pNo = parsed.data.personnelNo;
-    if (pNo != null && (pNo < 300 || pNo > 2000)) {
-      res.status(400).json({ error: "Personel numarası 300 ile 2000 arasında olmalıdır" });
-      return;
-    }
-    updateData.personnelNo = pNo ?? null;
-  }
 
   const [user] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, id)).returning();
 

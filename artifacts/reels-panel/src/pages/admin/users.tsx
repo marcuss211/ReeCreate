@@ -23,14 +23,12 @@ const createUserSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır"),
   password: z.string().min(8, "Şifre en az 8 karakter olmalıdır"),
   role: z.string().default("user"),
-  personnelNo: z.preprocess(v => v === "" ? null : Number(v), z.number().int().min(300).max(2000).nullable().optional()),
 });
 
 const editUserSchema = z.object({
   name: z.string().min(1).optional(),
   status: z.string().optional(),
   role: z.string().optional(),
-  personnelNo: z.preprocess(v => v === "" ? null : Number(v), z.number().int().min(300).max(2000).nullable().optional()),
 });
 
 const resetPasswordSchema = z.object({
@@ -152,9 +150,10 @@ export default function AdminUsers() {
                       </SelectContent>
                     </Select><FormMessage /></FormItem>
                 )} />
-                <FormField control={createForm.control} name="personnelNo" render={({ field }) => (
-                  <FormItem><FormLabel>Personel No (300-2000)</FormLabel><FormControl><Input type="number" placeholder="örn: 347" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value)} /></FormControl><FormMessage /></FormItem>
-                )} />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">Personel No</p>
+                  <p className="text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">Otomatik atanacak</p>
+                </div>
                 <Button type="submit" className="w-full" disabled={createMutation.isPending}>Kullanıcı Oluştur</Button>
               </form>
             </Form>
@@ -219,7 +218,7 @@ export default function AdminUsers() {
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="icon" className="h-8 w-8" title="Düzenle" onClick={() => {
                             setEditUser(u);
-                            editForm.reset({ name: u.name, status: u.status, role: u.role, personnelNo: u.personnelNo });
+                            editForm.reset({ name: u.name, status: u.status, role: u.role });
                           }}>
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
@@ -277,11 +276,12 @@ export default function AdminUsers() {
                     </SelectContent>
                   </Select><FormMessage /></FormItem>
               )} />
-              <FormField control={editForm.control} name="personnelNo" render={({ field }) => (
-                <FormItem><FormLabel>Personel No (300-2000)</FormLabel>
-                  <FormControl><Input type="number" placeholder="örn: 347" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value)} /></FormControl>
-                  <FormMessage /></FormItem>
-              )} />
+              <div className="space-y-1">
+                <p className="text-sm font-medium leading-none">Personel No</p>
+                <p className="text-sm text-muted-foreground bg-muted rounded-md px-3 py-2 font-mono">
+                  {editUser?.personnelNo != null ? `#${editUser.personnelNo}` : "—"}
+                </p>
+              </div>
               <Button type="submit" className="w-full" disabled={updateMutation.isPending}>Değişiklikleri Kaydet</Button>
             </form>
           </Form>

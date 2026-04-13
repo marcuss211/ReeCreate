@@ -11,6 +11,4 @@ export interface CreateUserBody {
   username: string;
   password: string;
   role: string;
-  /** @nullable */
-  personnelNo?: number | null;
 }

@@ -85,7 +85,6 @@ export const CreateUserBody = zod.object({
   username: zod.string(),
   password: zod.string(),
   role: zod.string(),
-  personnelNo: zod.number().nullish(),
 });
 
 /**

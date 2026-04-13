@@ -1,62 +1,166 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, dailyReportsTable, reportItemsTable, walletAddressLogsTable, delayFlagsTable, instagramAccountsTable, walletAddressesTable } from "@workspace/db";
-import { eq, gte, sql, and } from "drizzle-orm";
+import {
+  db,
+  usersTable,
+  dailyReportsTable,
+  reportItemsTable,
+  walletAddressLogsTable,
+  delayFlagsTable,
+  instagramAccountsTable,
+  walletAddressesTable,
+} from "@workspace/db";
+import { eq, gte, sql, and, inArray } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
-import { GetDailyActivityQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
+type Period = "daily" | "weekly" | "monthly" | "alltime";
+
+// Dönem → en eski dahil edilecek tarih string'i (YYYY-MM-DD), daily_reports.date ile karşılaştırılır
+function getFromDateStr(period: Period): string | null {
+  const now = new Date();
+  if (period === "daily") return now.toISOString().split("T")[0];
+  if (period === "weekly") {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().split("T")[0];
+  }
+  if (period === "monthly") {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 29);
+    return d.toISOString().split("T")[0];
+  }
+  return null; // alltime → filtre yok
+}
+
+// Dönem → timestamp (wallet_address_logs.changed_at ve delay_flags.created_at için)
+function getFromTimestamp(period: Period): Date | null {
+  const now = new Date();
+  if (period === "daily") {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  if (period === "weekly") {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  if (period === "monthly") {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 29);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  return null;
+}
+
+// Dönem → grafik için kaç gün gösterileceği
+function getPeriodDays(period: Period): number {
+  if (period === "daily") return 1;
+  if (period === "weekly") return 7;
+  if (period === "monthly") return 30;
+  return 90; // alltime → son 90 gün trend
+}
+
 router.get("/dashboard/summary", requireAdmin, async (req, res): Promise<void> => {
-  const today = new Date().toISOString().split("T")[0];
-  const yesterday24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const rawPeriod = req.query.period as string;
+  const period: Period = ["daily", "weekly", "monthly", "alltime"].includes(rawPeriod)
+    ? (rawPeriod as Period)
+    : "daily";
 
-  const [totalUsers] = await db.select({ count: sql<number>`count(*)::int` }).from(usersTable).where(eq(usersTable.role, "user"));
-  const [activeUsers] = await db.select({ count: sql<number>`count(*)::int` }).from(usersTable).where(and(eq(usersTable.role, "user"), eq(usersTable.status, "active")));
+  const fromDateStr = getFromDateStr(period);
+  const fromTs = getFromTimestamp(period);
 
-  const todayReports = await db.select().from(dailyReportsTable).where(eq(dailyReportsTable.date, today));
-  const submittedToday = todayReports.filter(r => ["submitted", "approved", "late", "bulk_flagged"].includes(r.status)).length;
-  const missingToday = todayReports.filter(r => r.status === "missing").length;
-  const pendingApprovals = todayReports.filter(r => r.status === "submitted").length;
-  const rejectedItems = todayReports.filter(r => r.status === "rejected").length;
+  // Toplam ve aktif kullanıcı sayısı — dönem bağımsız (anlık snapshot)
+  const [totalUsers] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(usersTable)
+    .where(eq(usersTable.role, "user"));
 
-  const reportIds = todayReports.map(r => r.id);
-  let totalReelsToday = 0;
-  if (reportIds.length > 0) {
-    const [reelsCount] = await db
+  const [activeUsers] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(usersTable)
+    .where(and(eq(usersTable.role, "user"), eq(usersTable.status, "active")));
+
+  // Seçilen döneme ait daily_reports
+  const reports = fromDateStr
+    ? await db.select().from(dailyReportsTable).where(gte(dailyReportsTable.date, fromDateStr))
+    : await db.select().from(dailyReportsTable);
+
+  // Gönderildi: submitted + approved + late + bulk_flagged statüsü
+  const submittedCount = reports.filter(r =>
+    ["submitted", "approved", "late", "bulk_flagged"].includes(r.status)
+  ).length;
+
+  // Eksik: missing statüsü
+  const missingCount = reports.filter(r => r.status === "missing").length;
+
+  // Onay bekleyen: submitted statüsü
+  const pendingApprovals = reports.filter(r => r.status === "submitted").length;
+
+  // Reddedilen: rejected statüsü
+  const rejectedItems = reports.filter(r => r.status === "rejected").length;
+
+  // Onaylanmış rapor ID'leri (approvedReels hesabı için)
+  const approvedReportIds = reports.filter(r => r.status === "approved").map(r => r.id);
+
+  // Dönemdeki toplam reel kaydı (content_date bazlı)
+  const reelsQuery = fromDateStr
+    ? db.select({ count: sql<number>`count(*)::int` }).from(reportItemsTable).where(gte(reportItemsTable.contentDate, fromDateStr))
+    : db.select({ count: sql<number>`count(*)::int` }).from(reportItemsTable);
+  const [reelsResult] = await reelsQuery;
+  const totalReelsCount = reelsResult?.count ?? 0;
+
+  // Dönemde onaylanmış raporlara ait toplam reel sayısı
+  let totalApprovedReels = 0;
+  if (approvedReportIds.length > 0) {
+    const [approvedResult] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(reportItemsTable)
-      .where(eq(reportItemsTable.contentDate, today));
-    totalReelsToday = reelsCount?.count ?? 0;
+      .where(inArray(reportItemsTable.reportId, approvedReportIds));
+    totalApprovedReels = approvedResult?.count ?? 0;
   }
 
-  const [walletChanges] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(walletAddressLogsTable)
-    .where(gte(walletAddressLogsTable.changedAt, yesterday24h));
+  // Cüzdan değişimi — dönem başından itibaren
+  const walletQuery = fromTs
+    ? db.select({ count: sql<number>`count(*)::int` }).from(walletAddressLogsTable).where(gte(walletAddressLogsTable.changedAt, fromTs))
+    : db.select({ count: sql<number>`count(*)::int` }).from(walletAddressLogsTable);
+  const [walletResult] = await walletQuery;
+  const walletChanges = walletResult?.count ?? 0;
 
-  const delayedFlags = await db
-    .select({ userId: delayFlagsTable.userId })
-    .from(delayFlagsTable)
-    .where(sql`${delayFlagsTable.delayDayCount} > 2`);
+  // Gecikmeli kullanıcılar: delay_day_count > 2 olan bayraklar
+  const delayedFlagsQuery = fromTs
+    ? db.select({ userId: delayFlagsTable.userId }).from(delayFlagsTable)
+        .where(and(sql`${delayFlagsTable.delayDayCount} > 2`, gte(delayFlagsTable.createdAt, fromTs)))
+    : db.select({ userId: delayFlagsTable.userId }).from(delayFlagsTable)
+        .where(sql`${delayFlagsTable.delayDayCount} > 2`);
+  const delayedFlags = await delayedFlagsQuery;
   const delayedUsers = new Set(delayedFlags.map(f => f.userId)).size;
 
-  const bulkFlags = await db
-    .select({ userId: delayFlagsTable.userId })
-    .from(delayFlagsTable)
-    .where(eq(delayFlagsTable.isBulkEntryFlag, 1));
+  // Toplu giriş şüphesi: is_bulk_entry_flag = 1
+  const bulkQuery = fromTs
+    ? db.select({ userId: delayFlagsTable.userId }).from(delayFlagsTable)
+        .where(and(eq(delayFlagsTable.isBulkEntryFlag, 1), gte(delayFlagsTable.createdAt, fromTs)))
+    : db.select({ userId: delayFlagsTable.userId }).from(delayFlagsTable)
+        .where(eq(delayFlagsTable.isBulkEntryFlag, 1));
+  const bulkFlags = await bulkQuery;
   const bulkFlaggedUsers = new Set(bulkFlags.map(f => f.userId)).size;
 
   res.json({
+    period,
     totalUsers: totalUsers?.count ?? 0,
     activeUsers: activeUsers?.count ?? 0,
-    todaySubmittedCount: submittedToday,
-    todayMissingCount: missingToday,
-    totalReelsTodayCount: totalReelsToday,
+    submittedCount,
+    missingCount,
+    totalReelsCount,
+    totalApprovedReels,
     pendingApprovals,
     rejectedItems,
     delayedUsers,
     bulkFlaggedUsers,
-    walletChanges24h: walletChanges?.count ?? 0,
+    walletChanges,
   });
 });
 
@@ -117,8 +221,14 @@ router.get("/dashboard/user-summary", requireAuth, async (req, res): Promise<voi
 });
 
 router.get("/dashboard/daily-activity", requireAdmin, async (req, res): Promise<void> => {
-  const params = GetDailyActivityQueryParams.safeParse(req.query);
-  const days = params.success && params.data.days ? params.data.days : 14;
+  const rawPeriod = req.query.period as string;
+  const period: Period = ["daily", "weekly", "monthly", "alltime"].includes(rawPeriod)
+    ? (rawPeriod as Period)
+    : "daily";
+
+  // Geriye dönük bakış için gün sayısı (minimum 1)
+  const rawDays = req.query.days ? parseInt(req.query.days as string, 10) : null;
+  const days = rawDays && rawDays > 0 ? rawDays : getPeriodDays(period);
 
   const results = [];
   const now = new Date();

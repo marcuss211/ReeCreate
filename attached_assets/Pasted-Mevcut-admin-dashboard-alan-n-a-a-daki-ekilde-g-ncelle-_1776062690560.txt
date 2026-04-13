@@ -1,0 +1,68 @@
+Mevcut admin dashboard alanını aşağıdaki şekilde güncelle:
+
+1. Dashboard’a yeni bir kart ekle:
+
+* Kart adı: “Toplam Onaylı Reels”
+* Bu alan sistemde admin tarafından onaylanmış tüm reels kayıtlarının toplam sayısını göstermeli
+* Bu veri dummy/statik değil, veritabanındaki gerçek onaylı kayıt sayısından gelmeli
+
+2. Dashboard filtre sistemi ekle:
+   Dashboard üst alanına bir tarih filtreleme yapısı ekle. Kullanıcı şu filtreler arasında geçiş yapabilsin:
+
+* Günlük
+* Haftalık
+* Aylık
+* Tüm Zamanlar
+
+3. Tüm dashboard metrikleri seçilen filtreye göre yeniden hesaplanmalı:
+   Aşağıdaki tüm kutular ve grafikler filtreye göre doğru veri göstermeli:
+
+* Toplam Kullanıcı
+* Aktif Kullanıcı
+* Bugün Gönderilen
+* Bugün Eksik
+* Bugün Reel
+* Onay Bekleyen
+* Reddedilen
+* Gecikmeli Kullanıcı
+* Toplu Giriş Şüphesi
+* Cüzdan Değişimi (24s)
+* Yeni eklenecek: Toplam Onaylı Reels
+
+4. Filtre mantığı doğru çalışmalı:
+
+* Günlük = sadece bugünün verileri
+* Haftalık = son 7 gün
+* Aylık = son 30 gün
+* Tüm Zamanlar = sistemdeki tüm kayıtlar
+
+5. Veri doğruluğu:
+
+* Dashboard’daki tüm sayaçlar frontend’de sabit sayılarla değil, backend’den gerçek sorgular ile gelsin
+* Her kart için hesaplama mantığı net olsun
+* Özellikle “Toplam Onaylı Reels” sadece status = approved / onaylandı olan kayıtları saysın
+* Grafik alanı da seçilen tarih filtresine göre güncellensin
+* Günlük seçimde günlük dağılım, haftalıkta son 7 gün, aylıkta son 30 gün, tüm zamanlarda genel trend gösterilsin
+
+6. Teknik beklenti:
+
+* Dashboard verileri tek bir merkezi endpoint veya servis yapısından beslensin
+* Kod tekrarını azalt
+* Filtre değişince bütün kartlar ve grafik aynı anda refresh olsun
+* Loading ve boş veri durumları düzgün yönetilsin
+* Tarih filtreleri timezone hatası vermesin
+* Veriler tutarlı olsun, dashboard kartları birbiriyle çelişmesin
+
+7. UI beklentisi:
+
+* Mevcut tasarımı bozma
+* Filtre alanını dashboard başlığının sağ üstüne temiz ve modern şekilde ekle
+* Yeni “Toplam Onaylı Reels” kartı mevcut kart yapısına uyumlu olsun
+* Mobil ve desktop görünüm bozulmasın
+
+8. İstenen çıktı:
+
+* Gerekli frontend ve backend değişikliklerini yap
+* Veritabanı sorgularını güncelle
+* Dashboard’daki tüm alanları gerçek veriye bağla
+* Kullanılan metriklerin hesaplama mantığını kısa not şeklinde kod içinde açıklayıcı yorumlarla belirt

@@ -13,7 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, X, FileText, Trash2 } from "lucide-react";
+import { Plus, Pencil, X, FileText, Trash2, ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+
+type SortKey = "endDate" | "remainingAmount";
+type SortDir = "asc" | "desc";
 
 interface Agreement {
   id: number;
@@ -159,6 +162,25 @@ export default function AdminOdemeTakip() {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Agreement | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      if (sortDir === "asc") setSortDir("desc");
+      else { setSortKey(null); setSortDir("asc"); }
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col) return <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />;
+    return sortDir === "asc"
+      ? <ChevronUp className="h-3.5 w-3.5 text-primary" />
+      : <ChevronDown className="h-3.5 w-3.5 text-primary" />;
+  }
 
   const { data: agreements, isLoading } = useQuery<Agreement[]>({
     queryKey: ["payment-agreements"],
@@ -234,6 +256,12 @@ export default function AdminOdemeTakip() {
   const { remaining: formRemaining, paymentStatus: formPaymentStatus } = derivePayment(form.totalAmount, form.paidAmount);
 
   const sorted = [...(agreements ?? [])].sort((a, b) => {
+    if (sortKey) {
+      const dir = sortDir === "asc" ? 1 : -1;
+      if (sortKey === "endDate") return a.endDate.localeCompare(b.endDate) * dir;
+      if (sortKey === "remainingAmount") return (a.remainingAmount - b.remainingAmount) * dir;
+    }
+    // Varsayılan: durum önce, ardından bitiş tarihi artan
     const sa = getStatus(a.endDate), sb = getStatus(b.endDate);
     const order: Record<AgreementStatus, number> = { "Bugun Bitiyor": 0, "Aktif": 1, "Suresi Doldu": 2 };
     if (order[sa] !== order[sb]) return order[sa] - order[sb];
@@ -267,11 +295,25 @@ export default function AdminOdemeTakip() {
                 <tr className="border-b border-border bg-muted/40">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Instagram Hesapları</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Başlangıç</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Bitiş</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <button
+                      onClick={() => handleSort("endDate")}
+                      className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${sortKey === "endDate" ? "text-foreground" : ""}`}
+                    >
+                      Bitiş <SortIcon col="endDate" />
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Durum</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">Toplam Tutar</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ödenen</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Kalan</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    <button
+                      onClick={() => handleSort("remainingAmount")}
+                      className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ml-auto ${sortKey === "remainingAmount" ? "text-foreground" : ""}`}
+                    >
+                      Kalan <SortIcon col="remainingAmount" />
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Ödeme Durumu</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">İşlemler</th>
                 </tr>

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, instagramAccountsTable, usersTable } from "@workspace/db";
+import { db, instagramAccountsTable, usersTable, reportItemsTable } from "@workspace/db";
 import { eq, like, and } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { createAuditLog } from "../lib/audit";
@@ -170,6 +170,38 @@ router.patch("/instagram-accounts/:id", requireAdmin, async (req, res): Promise<
   });
 
   res.json({ ...account, userName: user?.name ?? null, userPersonnelNo: user?.personnelNo ?? null });
+});
+
+router.delete("/instagram-accounts/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Geçersiz ID" });
+    return;
+  }
+
+  const [existing] = await db.select().from(instagramAccountsTable).where(eq(instagramAccountsTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Hesap bulunamadı" });
+    return;
+  }
+
+  const [itemCheck] = await db.select().from(reportItemsTable).where(eq(reportItemsTable.instagramAccountId, id));
+  if (itemCheck) {
+    res.status(400).json({ error: "Bu hesaba ait reel kayıtları bulunduğu için silinemez" });
+    return;
+  }
+
+  await createAuditLog({
+    userId: req.user?.id,
+    actionType: "delete_instagram_account",
+    targetType: "instagram_account",
+    targetId: id,
+    oldValue: JSON.stringify({ instagramUsername: existing.instagramUsername }),
+    req,
+  });
+
+  await db.delete(instagramAccountsTable).where(eq(instagramAccountsTable.id, id));
+  res.status(204).send();
 });
 
 export default router;

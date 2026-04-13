@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useListInstagramAccounts, useCreateInstagramAccount, useUpdateInstagramAccount, useListUsers, getListInstagramAccountsQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Instagram, AtSign } from "lucide-react";
+import { Plus, Search, Edit, Instagram, AtSign, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const createSchema = z.object({
@@ -33,6 +35,7 @@ export default function AdminAccounts() {
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<any | null>(null);
+  const [deleteAccount, setDeleteAccount] = useState<{ id: number; instagramUsername: string } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -40,6 +43,16 @@ export default function AdminAccounts() {
   const { data: users } = useListUsers({ status: "active" });
   const createMutation = useCreateInstagramAccount();
   const updateMutation = useUpdateInstagramAccount();
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => customFetch(`/api/instagram-accounts/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast({ title: "Hesap silindi" });
+      queryClient.invalidateQueries({ queryKey: getListInstagramAccountsQueryKey({}) });
+      setDeleteAccount(null);
+    },
+    onError: (e: any) => toast({ title: "Silinemedi", description: e?.message ?? "Bir hata oluştu", variant: "destructive" }),
+  });
 
   const createForm = useForm<z.infer<typeof createSchema>>({ resolver: zodResolver(createSchema) });
   const editForm = useForm<z.infer<typeof editSchema>>({ resolver: zodResolver(editSchema) });
@@ -186,7 +199,7 @@ export default function AdminAccounts() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Düzenle" onClick={() => {
                             setEditAccount(a);
                             editForm.reset({ instagramUsername: a.instagramUsername, profileUrl: a.profileUrl ?? "", description: a.description ?? "", status: a.status });
                           }}>
@@ -194,6 +207,15 @@ export default function AdminAccounts() {
                           </Button>
                           <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => toggleStatus(a)}>
                             {a.status === "active" ? "Pasife Al" : "Aktife Al"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Hesabı Sil"
+                            onClick={() => setDeleteAccount({ id: a.id, instagramUsername: a.instagramUsername })}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </td>
@@ -235,6 +257,29 @@ export default function AdminAccounts() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteAccount} onOpenChange={open => !open && setDeleteAccount(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hesabı Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>@{deleteAccount?.instagramUsername}</strong> kalıcı olarak silinecek. Bu işlem geri alınamaz.
+              <br /><br />
+              <span className="text-amber-600 font-medium">Not:</span> Bu hesaba bağlı reel kayıtları varsa hesap silinemez.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteAccount && deleteMutation.mutate(deleteAccount.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Siliniyor…" : "Sil"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

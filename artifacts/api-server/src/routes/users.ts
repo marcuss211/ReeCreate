@@ -258,7 +258,53 @@ router.post("/users/:id/reset-password", requireAdmin, async (req, res): Promise
     req,
   });
 
-  res.json({ message: "Password reset successfully" });
+  res.json({ message: "Şifre başarıyla sıfırlandı" });
+});
+
+router.delete("/users/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Geçersiz ID" });
+    return;
+  }
+
+  if (req.user?.id === id) {
+    res.status(400).json({ error: "Kendi hesabınızı silemezsiniz" });
+    return;
+  }
+
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Kullanıcı bulunamadı" });
+    return;
+  }
+
+  const [reportCheck] = await db.select().from(dailyReportsTable).where(eq(dailyReportsTable.userId, id));
+  if (reportCheck) {
+    res.status(400).json({ error: "Bu kullanıcıya ait raporlar bulunduğu için silinemez" });
+    return;
+  }
+
+  const [accountCheck] = await db.select().from(instagramAccountsTable).where(eq(instagramAccountsTable.userId, id));
+  if (accountCheck) {
+    res.status(400).json({ error: "Bu kullanıcıya atanmış Instagram hesapları var, önce hesapları silin veya başka kullanıcıya atayın" });
+    return;
+  }
+
+  await createAuditLog({
+    userId: req.user?.id,
+    actionType: "delete_user",
+    targetType: "user",
+    targetId: id,
+    oldValue: JSON.stringify({ name: existing.name, username: existing.username }),
+    req,
+  });
+
+  await db.delete(walletAddressesTable).where(eq(walletAddressesTable.userId, id));
+  await db.delete(delayFlagsTable).where(eq(delayFlagsTable.userId, id));
+  await db.delete(usersTable).where(eq(usersTable.id, id));
+
+  res.status(204).send();
 });
 
 export default router;

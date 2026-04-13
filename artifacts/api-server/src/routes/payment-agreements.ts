@@ -119,4 +119,25 @@ router.patch("/payment-agreements/:id", requireAdmin, async (req, res): Promise<
   res.json(updated);
 });
 
+router.delete("/payment-agreements/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Geçersiz ID" });
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(paymentAgreementsTable)
+    .where(eq(paymentAgreementsTable.id, id));
+
+  if (!existing) {
+    res.status(404).json({ error: "Kayıt bulunamadı" });
+    return;
+  }
+
+  await db.delete(paymentAgreementsTable).where(eq(paymentAgreementsTable.id, id));
+  res.status(204).send();
+});
+
 export default router;

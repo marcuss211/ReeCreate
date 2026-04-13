@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useListUsers, useCreateUser, useUpdateUser, useResetUserPassword, getListUsersQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,11 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserStatusBadge } from "@/components/status-badges";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Key, UserX, UserCheck, User } from "lucide-react";
+import { Plus, Search, Edit, Key, UserX, UserCheck, User, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const createUserSchema = z.object({
@@ -40,6 +42,7 @@ export default function AdminUsers() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<{ id: number; name: string; username: string; role: string; status: string; personnelNo?: number | null } | null>(null);
   const [resetUser, setResetUser] = useState<{ id: number; name: string } | null>(null);
+  const [deleteUser, setDeleteUser] = useState<{ id: number; name: string; username: string } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -47,6 +50,16 @@ export default function AdminUsers() {
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const resetMutation = useResetUserPassword();
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => customFetch(`/api/users/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast({ title: "Kullanıcı silindi" });
+      queryClient.invalidateQueries({ queryKey: getListUsersQueryKey({}) });
+      setDeleteUser(null);
+    },
+    onError: (e: any) => toast({ title: "Silinemedi", description: e?.message ?? "Bir hata oluştu", variant: "destructive" }),
+  });
 
   const createForm = useForm<z.infer<typeof createUserSchema>>({ resolver: zodResolver(createUserSchema) });
   const editForm = useForm<z.infer<typeof editUserSchema>>({ resolver: zodResolver(editUserSchema) });
@@ -216,6 +229,15 @@ export default function AdminUsers() {
                           <Button variant="ghost" size="icon" className="h-8 w-8" title={u.status === "active" ? "Pasife Al" : "Aktife Al"} onClick={() => toggleStatus(u)}>
                             {u.status === "active" ? <UserX className="h-3.5 w-3.5 text-red-500" /> : <UserCheck className="h-3.5 w-3.5 text-green-500" />}
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Kullanıcıyı Sil"
+                            onClick={() => setDeleteUser({ id: u.id, name: u.name, username: u.username })}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -279,6 +301,29 @@ export default function AdminUsers() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteUser} onOpenChange={open => !open && setDeleteUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kullanıcıyı Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deleteUser?.name}</strong> (@{deleteUser?.username}) kalıcı olarak silinecek. Bu işlem geri alınamaz.
+              <br /><br />
+              <span className="text-amber-600 font-medium">Not:</span> Raporları veya atanmış Instagram hesapları olan kullanıcılar silinemez.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteUser && deleteMutation.mutate(deleteUser.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Siliniyor…" : "Sil"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

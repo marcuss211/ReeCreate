@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Pencil, X, FileText } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, Pencil, X, FileText, Trash2 } from "lucide-react";
 
 interface Agreement {
   id: number;
@@ -127,10 +128,21 @@ export default function AdminOdemeTakip() {
   const [editTarget, setEditTarget] = useState<Agreement | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Agreement | null>(null);
 
   const { data: agreements, isLoading } = useQuery<Agreement[]>({
     queryKey: ["payment-agreements"],
     queryFn: () => customFetch("/api/payment-agreements"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => customFetch(`/api/payment-agreements/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast({ title: "Kayıt silindi" });
+      queryClient.invalidateQueries({ queryKey: ["payment-agreements"] });
+      setDeleteTarget(null);
+    },
+    onError: (e: any) => toast({ title: "Hata", description: e?.message ?? "Bir hata oluştu", variant: "destructive" }),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["payment-agreements"] });
@@ -228,7 +240,7 @@ export default function AdminOdemeTakip() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Bitiş</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Durum</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Notlar</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground"></th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">İşlemler</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,10 +281,21 @@ export default function AdminOdemeTakip() {
                         {a.notes ?? "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(a)} className="gap-1.5">
-                          <Pencil className="h-3.5 w-3.5" />
-                          Düzenle
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(a)} className="gap-1.5">
+                            <Pencil className="h-3.5 w-3.5" />
+                            Düzenle
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteTarget(a)}
+                            className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Sil
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -345,6 +368,27 @@ export default function AdminOdemeTakip() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kaydı Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deleteTarget?.instagramAccounts}</strong> anlaşması kalıcı olarak silinecek. Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Siliniyor…" : "Sil"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -408,42 +408,91 @@ cd lib/api-client-react && pnpm exec tsc -p tsconfig.json
 
 ---
 
-## Üretim Dağıtımı
+## Üretim Dağıtımı (VPS)
 
-### 1. Build Al
+> Üretimde backend **hem API'yi hem de frontend'i tek portta** servis eder. Ayrı bir Nginx / statik sunucu gerekmez.
+
+### 1. `.env` Dosyasını Oluştur
 
 ```bash
-# Backend
-pnpm --filter @workspace/api-server run build
-
-# Frontend
-pnpm --filter @workspace/reels-panel run build
+cp .env.example .env
 ```
 
-### 2. Üretim Ortam Değişkenleri
+`.env` içini doldurun:
 
 ```env
+DATABASE_URL=postgresql://user:password@localhost:5432/reels_panel
+SESSION_SECRET=<openssl rand -hex 32 ile üretilmiş 64 karakter>
+PORT=3000
 NODE_ENV=production
-DATABASE_URL=postgresql://...
-SESSION_SECRET=<openssl rand -hex 32>
-PORT=8080
-CORS_ORIGIN=https://sizin-domain.com
+# LOG_LEVEL=info
 ```
 
-### 3. Çalıştır
+### 2. Build Al (tek komut)
 
 ```bash
-# API sunucusu
-node --enable-source-maps artifacts/api-server/dist/index.mjs
-
-# Frontend — dist/ klasörünü Nginx veya statik bir sunucu ile servis et
+pnpm run build:prod
 ```
 
-### Sağlık Kontrolü
+Bu komut şunları sırasıyla yapar:
+1. `pnpm install` — bağımlılıkları yükler
+2. Backend build → `artifacts/api-server/dist/`
+3. Frontend build (`BASE_PATH=/`, `VITE_API_BASE_URL=/api`) → `artifacts/reels-panel/dist/public/`
+4. Frontend dosyalarını `artifacts/api-server/dist/public/` altına kopyalar
+
+### 3. Veritabanı Şemasını Uygula ve Başlat
 
 ```bash
-curl https://sizin-domain.com/api/healthz
+pnpm run start:prod
+```
+
+Bu komut `.env` dosyasını okur, `drizzle-kit push` ile şemayı uygular ve sunucuyu başlatır.
+
+Ya da manuel:
+
+```bash
+# Şema push
+pnpm run db:push
+
+# Başlat
+NODE_ENV=production PORT=3000 node --enable-source-maps artifacts/api-server/dist/index.mjs
+```
+
+### 4. Sağlık Kontrolü
+
+```bash
+curl http://localhost:3000/api/healthz
 # {"status":"ok"}
+```
+
+### PM2 ile Daemonize (Önerilen)
+
+```bash
+npm install -g pm2
+pm2 start artifacts/api-server/dist/index.mjs \
+  --name reels-panel \
+  --node-args "--enable-source-maps" \
+  --env production
+pm2 save
+pm2 startup
+```
+
+### Nginx Ters Proxy (İsteğe Bağlı, Önerilen)
+
+```nginx
+server {
+    listen 80;
+    server_name sizin-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
 ---

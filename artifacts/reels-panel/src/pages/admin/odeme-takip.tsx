@@ -443,31 +443,36 @@ export default function AdminOdemeTakip() {
                       <td className="px-4 py-3">
                         <PaymentStatusBadge status={a.paymentStatus} />
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-end gap-0.5">
                           {a.remainingAmount > 0 && (
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon"
                               onClick={() => openPayModal(a)}
-                              className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="Ödeme Ekle"
                             >
-                              <Wallet className="h-3.5 w-3.5" />
-                              Ödeme Ekle
+                              <Wallet className="h-4 w-4" />
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(a)} className="gap-1.5">
-                            <Pencil className="h-3.5 w-3.5" />
-                            Düzenle
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(a)}
+                            className="h-8 w-8"
+                            title="Düzenle"
+                          >
+                            <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={() => setDeleteTarget(a)}
-                            className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Sil"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Sil
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>

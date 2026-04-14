@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import {
   LayoutDashboard,
   Users,
@@ -14,11 +16,22 @@ import {
   Menu,
   CreditCard,
   BarChart3,
+  TicketCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-const adminNav = [
+function useAdminUnread() {
+  const { data } = useQuery<{ unreadCount: number }>({
+    queryKey: ["ticket-unread"],
+    queryFn: () => customFetch("/api/tickets/unread-count"),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+  return data?.unreadCount ?? 0;
+}
+
+const adminNavBase = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "İnceleme", href: "/admin/review", icon: CheckSquare },
   { name: "Kullanıcılar", href: "/admin/users", icon: Users },
@@ -27,6 +40,7 @@ const adminNav = [
   { name: "Raporlar", href: "/admin/raporlar", icon: BarChart3 },
   { name: "İzleme", href: "/admin/monitoring", icon: ActivitySquare },
   { name: "Cüzdanlar", href: "/admin/wallets", icon: Wallet },
+  { name: "Destek Talepleri", href: "/admin/support", icon: TicketCheck, badge: true },
   { name: "Denetim Logu", href: "/admin/audit", icon: History },
   { name: "Dışa Aktar", href: "/admin/export", icon: Download },
 ];
@@ -34,6 +48,7 @@ const adminNav = [
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const unreadCount = useAdminUnread();
 
   if (!user || user.role !== "admin") {
     return null;
@@ -47,12 +62,17 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </div>
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="grid gap-1 px-2">
-          {adminNav.map((item) => {
+          {adminNavBase.map((item) => {
             const isActive = location === item.href || location.startsWith(`${item.href}/`);
             return (
               <Link key={item.name} href={item.href} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`}>
-                <item.icon className="h-4 w-4" />
-                {item.name}
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{item.name}</span>
+                {item.badge && unreadCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}

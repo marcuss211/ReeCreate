@@ -13,6 +13,7 @@ import dashboardRouter from "./dashboard";
 import exportRouter from "./export";
 import paymentAgreementsRouter from "./payment-agreements";
 import reportsRouter from "./reports";
+import ticketsRouter from "./tickets";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(dashboardRouter);
 router.use(exportRouter);
 router.use(paymentAgreementsRouter);
 router.use(reportsRouter);
+router.use(ticketsRouter);
 
 export default router;

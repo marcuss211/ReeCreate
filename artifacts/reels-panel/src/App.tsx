@@ -18,12 +18,16 @@ import AdminAudit from "@/pages/admin/audit";
 import AdminExport from "@/pages/admin/export";
 import AdminOdemeTakip from "@/pages/admin/odeme-takip";
 import AdminRaporlar from "@/pages/admin/raporlar";
+import AdminSupport from "@/pages/admin/support";
+import AdminSupportDetail from "@/pages/admin/support-detail";
 import TwoFactorSetup from "@/pages/admin/two-factor-setup";
 import TwoFactorVerify from "@/pages/admin/two-factor-verify";
 import UserDashboard from "@/pages/user/dashboard";
 import UserEntry from "@/pages/user/entry";
 import UserHistory from "@/pages/user/history";
 import UserCekim from "@/pages/user/cekim";
+import UserSupport from "@/pages/user/support";
+import UserSupportDetail from "@/pages/user/support-detail";
 import { Redirect } from "wouter";
 
 const queryClient = new QueryClient({
@@ -94,6 +98,16 @@ function Router() {
           <AdminLayout><AdminRaporlar /></AdminLayout>
         </ProtectedRoute>
       </Route>
+      <Route path="/admin/support/:id">
+        <ProtectedRoute requireAdmin>
+          <AdminLayout><AdminSupportDetail /></AdminLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/support">
+        <ProtectedRoute requireAdmin>
+          <AdminLayout><AdminSupport /></AdminLayout>
+        </ProtectedRoute>
+      </Route>
 
       <Route path="/dashboard">
         <ProtectedRoute>
@@ -113,6 +127,16 @@ function Router() {
       <Route path="/cekim">
         <ProtectedRoute>
           <UserLayout><UserCekim /></UserLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/support/:id">
+        <ProtectedRoute>
+          <UserLayout><UserSupportDetail /></UserLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/support">
+        <ProtectedRoute>
+          <UserLayout><UserSupport /></UserLayout>
         </ProtectedRoute>
       </Route>
 

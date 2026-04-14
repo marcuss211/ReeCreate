@@ -1,0 +1,236 @@
+Admin paneli ve kullanıcı paneli içine dahili bir mesaj / destek ticket sistemi ekle.
+
+Amaç:
+Kullanıcıların panel içinden admine düzenli şekilde destek talebi / mesaj gönderebildiği, adminin de bu talepleri tek ekrandan profesyonel şekilde yönetebildiği bir ticket sistemi oluşturmak.
+
+1. Genel yapı
+
+* Sistemde hem kullanıcı panelinde hem admin panelinde ticket modülü olsun
+* Kullanıcı yalnızca kendi açtığı ticketları görebilsin
+* Admin tüm ticketları görebilsin ve yönetebilsin
+* Ticket sistemi mevcut panel tasarımına uyumlu, temiz ve profesyonel görünsün
+* Mobil ve desktop uyumlu çalışsın
+
+2. Kullanıcı tarafı
+   Kullanıcı paneline yeni bir menü ekle:
+
+* Destek Talepleri
+
+Bu alanda kullanıcı:
+
+* Yeni ticket oluşturabilsin
+* Kendi açtığı ticketları listeleyebilsin
+* Ticket durumuna göre filtreleme yapabilsin
+* Ticket detayına girip geçmiş konuşmaları görebilsin
+* Admin yanıtlarına cevap verebilsin
+* Kapanmış ticketları görebilsin
+* Gerekirse kendi ticketını yeniden açabilsin
+
+3. Kullanıcı ticket listesi
+   Kullanıcı kendi panelinde şu alanları görsün:
+
+* Ticket No
+* Başlık
+* Öncelik
+* Durum
+* Oluşturulma Tarihi
+* Son Güncelleme Tarihi
+* Son Mesajı Gönderen Taraf
+* İşlem / Detay
+
+Durum filtreleri:
+
+* Açık
+* İnceleniyor
+* Kullanıcıdan Cevap Bekleniyor
+* Çözüldü
+* Kapatıldı
+
+4. Yeni ticket oluşturma formu
+   Kullanıcı yeni ticket açarken şu alanlar olsun:
+
+* Başlık
+* Kategori
+* Açıklama / ilk mesaj
+* Öncelik: Düşük / Orta / Yüksek / Acil
+
+Kategori örnekleri:
+
+* Teknik Sorun
+* Giriş Problemi
+* Reels / Gönderim Sorunu
+* Hesap Atama Sorunu
+* Ödeme ile İlgili
+* Panel Hatası
+* Diğer
+
+5. Admin tarafı
+   Admin paneline yeni bir sayfa ekle:
+
+* Destek Talepleri
+
+Admin burada:
+
+* Tüm ticketları listeleyebilsin
+* Ticket detayına girip konuşma geçmişini görebilsin
+* Kullanıcıya cevap verebilsin
+* Ticket durumunu değiştirebilsin
+* Öncelik değiştirebilsin
+* Ticketı farklı bir admine atayabilsin
+* İç not ekleyebilsin
+* Ticketı kapatabilsin veya tekrar açabilsin
+
+6. Admin liste ekranı
+   Admin ticket listesinde şu alanlar olsun:
+
+* Ticket No
+* Kullanıcı Adı
+* Başlık
+* Kategori
+* Öncelik
+* Durum
+* Oluşturulma Tarihi
+* Son Güncelleme Tarihi
+* Atanan Admin
+* Okunmadı Durumu
+* İşlemler
+
+Admin filtreleri:
+
+* Kullanıcıya göre
+* Duruma göre
+* Önceliğe göre
+* Kategoriye göre
+* Tarihe göre
+* Atanan admine göre
+
+Arama alanı:
+
+* Ticket No
+* Kullanıcı adı
+* Başlık
+  üzerinden arama yapabilsin
+
+7. Ticket detay ekranı
+   Ticket detayında konuşma akışı sohbet mantığında görünsün:
+
+* Kullanıcı mesajları
+* Admin cevapları
+* Mesaj saat ve tarih bilgisi
+* Sistem durum değişiklikleri
+
+Admin burada:
+
+* Mesaj yazabilsin
+* Durumu değiştirebilsin
+* Önceliği değiştirebilsin
+* Atanan admini değiştirebilsin
+* İç not ekleyebilsin
+
+Kullanıcı burada:
+
+* Ticket detayını görebilsin
+* Yeni cevap yazabilsin
+* Ticket kapalıysa tekrar açma talebi verebilsin
+
+8. Ticket durum mantığı
+   Destek taleplerinde şu durumlar olsun:
+
+* Açık
+* İnceleniyor
+* Kullanıcıdan Cevap Bekleniyor
+* Çözüldü
+* Kapatıldı
+
+Ek durum mantığı:
+
+* Yeni ticket açılınca varsayılan durum “Açık” olsun
+* Admin cevap verince gerekirse durum “Kullanıcıdan Cevap Bekleniyor” yapılabilsin
+* Kullanıcı yeniden cevap verince ticket tekrar aktif akışa dönsün
+* Çözüldü ve Kapatıldı durumları ayrı olsun
+* Kapatılan ticket gerekirse admin veya kullanıcı tarafından tekrar açılabilsin
+
+9. Bildirim sistemi
+
+* Kullanıcı yeni admin cevabı aldığında panel içinde bildirim görsün
+* Admin yeni ticket geldiğinde bildirim görsün
+* Admin ticketa yeni kullanıcı cevabı geldiğinde bildirim görsün
+* Okunmamış ticket ve mesaj sayıları rozet/badge olarak gösterilebilsin
+
+10. İç not sistemi
+
+* Admin için yalnızca adminlerin görebileceği iç not alanı olsun
+* Bu notlar kullanıcı tarafında görünmesin
+* Ticket geçmişine yönetimsel not düşülebilsin
+
+11. Ticket numarası ve atama mantığı
+
+* Her ticket için otomatik benzersiz ticket numarası oluşsun
+* Ticket ilk açıldığında istenirse “Atanmamış” olarak kalsın veya varsayılan admine düşsün
+* Admin sonradan ticketı belirli bir admine atayabilsin
+
+12. Teknik beklenti
+    Backend ve database tarafında ticket sistemi düzgün kurulmalı.
+
+Önerilen yapı:
+
+* tickets tablosu
+* ticket_messages tablosu
+* ticket_internal_notes tablosu
+
+Temel alanlar:
+tickets:
+
+* id
+* ticket_no
+* user_id
+* subject
+* category
+* priority
+* status
+* assigned_admin_id
+* created_at
+* updated_at
+* closed_at
+
+ticket_messages:
+
+* id
+* ticket_id
+* sender_id
+* sender_role
+* message
+* created_at
+
+ticket_internal_notes:
+
+* id
+* ticket_id
+* admin_id
+* note
+* created_at
+
+13. Yetki ve güvenlik
+
+* Kullanıcı sadece kendi ticketlarını görebilsin
+* Kullanıcı başka kullanıcıların ticketlarına erişemesin
+* Admin tüm ticketları görebilsin
+* İç notlar sadece admin tarafında erişilebilir olsun
+
+14. Kullanım deneyimi
+
+* Sayfa yenilemeden güncellenebilen temiz bir yapı olsun
+* Gerçek zamanlı değilse bile başarılı kayıttan sonra liste ve detay alanı anında yenilensin
+* Loading state, empty state ve error state düzgün çalışsın
+* Mesaj yoksa, sonuç yoksa uygun bilgilendirme mesajları gösterilsin
+* Arayüz karmaşık değil, sade ve hızlı kullanılabilir olsun
+
+15. Ekstra beklenti
+
+* Ticket kapatıldığında geçmiş silinmesin
+* Kullanıcı ve admin tüm konuşma geçmişini görebilsin
+* Ticketlar raporlanabilir ve filtrelenebilir yapıda olsun
+* Gerekirse ileride e-posta/Telegram bildirimi bağlanabilecek şekilde modüler kurulsun
+
+İstenen sonuç:
+Kullanıcıların panel içinden düzenli şekilde ticket açabildiği, adminin bunları tek ekrandan filtreleyip yönetebildiği, sohbet akışı, durum yönetimi, iç not, bildirim ve yetki kontrolü olan profesyonel bir destek/ticket sistemi kurulmuş olsun.

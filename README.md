@@ -29,8 +29,8 @@ Dahili operasyon ekipleri için geliştirilmiş **tam yığın web uygulaması**
 
 | Rol | Yetkiler |
 |-----|----------|
-| **Admin** | Kullanıcı ve Instagram hesabı yönetimi, günlük rapor onaylama/reddetme/eksik işaretleme, gecikme ve toplu giriş tespiti, cüzdan değişikliği izleme, denetim logu, CSV/Excel dışa aktarma, ödeme anlaşması takibi |
-| **Kullanıcı** | Günlük Reels link girişi, rapor geçmişi görüntüleme, USDT TRC20 cüzdan adresi yönetimi |
+| **Admin** | Kullanıcı ve Instagram hesabı yönetimi, günlük rapor onaylama/reddetme/eksik işaretleme, gecikme ve toplu giriş tespiti, cüzdan değişikliği izleme, denetim logu, CSV/Excel dışa aktarma, ödeme anlaşması takibi, destek talep yönetimi |
+| **Kullanıcı** | Günlük Reels link girişi, rapor geçmişi görüntüleme, USDT TRC20 cüzdan adresi yönetimi, destek talebi açma ve takibi |
 
 ---
 
@@ -68,8 +68,8 @@ Dahili operasyon ekipleri için geliştirilmiş **tam yığın web uygulaması**
 │   └── reels-panel/             # React frontend (geliştirmede ayrı port)
 │       └── src/
 │           ├── pages/
-│           │   ├── admin/       # Dashboard, review, users, accounts, audit, …
-│           │   └── user/        # Dashboard, entry, history, cekim
+│           │   ├── admin/       # Dashboard, review, users, accounts, support, audit, …
+│           │   └── user/        # Dashboard, entry, history, cekim, support
 │           ├── components/      # Ortak UI bileşenleri
 │           └── hooks/           # use-auth.tsx
 ├── lib/
@@ -89,7 +89,7 @@ Dahili operasyon ekipleri için geliştirilmiş **tam yığın web uygulaması**
 
 ## Veritabanı Şeması
 
-9 tablo:
+12 tablo:
 
 ```
 users
@@ -116,6 +116,27 @@ report_items
 ├── instagram_account_id → instagram_accounts
 ├── reels_url (normalize edilmiş)
 ├── content_date, entered_at
+└── created_at
+
+tickets
+├── id, ticket_no (TK-0001 formatı, benzersiz)
+├── user_id → users
+├── subject, category, priority
+├── status: "open" | "in_progress" | "waiting_user" | "resolved" | "closed"
+├── assigned_admin_id → users (isteğe bağlı)
+├── is_read_by_admin, is_read_by_user   — okunmamış rozet bayrakları
+└── created_at, updated_at, closed_at
+
+ticket_messages
+├── id, ticket_id → tickets (CASCADE)
+├── sender_id → users, sender_role: "user" | "admin"
+├── message
+└── created_at
+
+ticket_internal_notes
+├── id, ticket_id → tickets (CASCADE)
+├── admin_id → users
+├── note
 └── created_at
 
 payment_agreements   — Instagram hesabı ödeme anlaşmaları (başlangıç/bitiş tarihi, notlar)
@@ -279,8 +300,11 @@ Admin hesapları **Google Authenticator (TOTP)** gerektirir. 2FA olmadan admin p
 | Kullanıcılar | `/admin/users` | Kullanıcı oluşturma, düzenleme, silme, şifre sıfırlama |
 | Hesaplar | `/admin/accounts` | Instagram hesabı oluşturma, atama, silme |
 | Ödeme Takip | `/admin/odeme-takip` | Anlaşma başlangıç/bitiş tarihi ve durum takibi |
+| Raporlar | `/admin/raporlar` | Zaman çizelgesi ve dönem bazlı raporlama |
 | İzleme | `/admin/monitoring` | Gecikme ve toplu giriş tespiti |
 | Cüzdanlar | `/admin/wallets` | USDT TRC20 cüzdan değişiklik izleme |
+| Destek Talepleri | `/admin/support` | Tüm kullanıcı destek ticketları (filtre + arama); rozette okunmamış sayısı |
+| Destek Detay | `/admin/support/:id` | Ticket yönetimi: durum/öncelik/atama + sohbet + iç notlar |
 | Denetim Logu | `/admin/audit` | Tüm sistem aksiyonları |
 | Dışa Aktar | `/admin/export` | CSV veya Excel olarak günlük rapor indir |
 | 2FA Kurulum | `/admin/2fa-setup` | İlk girişte otomatik yönlendirilen kurulum sayfası |
@@ -294,6 +318,8 @@ Admin hesapları **Google Authenticator (TOTP)** gerektirir. 2FA olmadan admin p
 | Günlük Giriş | `/entry` | Tarih seçerek Reels linki ekle / sil |
 | Geçmiş | `/history` | Geçmiş raporlar ve admin notları |
 | Çekim | `/cekim` | USDT TRC20 cüzdan adresi ekleme ve değiştirme |
+| Destek Talepleri | `/support` | Ticket listesi (durum filtresi) + yeni ticket formu; rozette okunmamış sayısı |
+| Destek Detay | `/support/:id` | Ticket sohbet görünümü, cevap formu, yeniden açma |
 
 ---
 
@@ -346,6 +372,26 @@ Tüm endpoint'ler `/api` prefix'i ile başlar. Kimlik doğrulama `auth_token` **
 | `POST` | `/api/payment-agreements` | Anlaşma oluştur |
 | `PATCH` | `/api/payment-agreements/:id` | Anlaşma güncelle |
 | `DELETE` | `/api/payment-agreements/:id` | Anlaşma sil |
+
+### Destek Talepleri (Tickets)
+
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| `GET` | `/api/tickets` | Ticket listesi (admin: tümü + filtreler; kullanıcı: kendi ticketları) |
+| `POST` | `/api/tickets` | Ticket oluştur (kullanıcı); ticket_no otomatik `TK-0001` formatında |
+| `GET` | `/api/tickets/unread-count` | Okunmamış rozet sayısı |
+| `GET` | `/api/tickets/:id` | Ticket detayı + mesajlar + iç notlar; otomatik okundu işaretler |
+| `PATCH` | `/api/tickets/:id` | Durum / öncelik / atanan admin güncelle |
+| `POST` | `/api/tickets/:id/messages` | Mesaj gönder (kullanıcı veya admin) |
+| `POST` | `/api/tickets/:id/notes` | İç not ekle — yalnızca admin |
+| `GET` | `/api/ticket-admins` | Atanabilir admin listesi |
+
+**Ticket kategorileri:** `technical`, `login`, `reels`, `account`, `payment`, `panel`, `other`
+
+**Ticket öncelikleri:** `low`, `medium`, `high`, `urgent`
+
+**Ticket durumları:** `open` → `in_progress` → `waiting_user` → `resolved` → `closed`  
+Kullanıcı `resolved`/`closed` durumundaki ticketi yeniden `open` yapabilir.
 
 ### Dashboard ve Diğer
 
